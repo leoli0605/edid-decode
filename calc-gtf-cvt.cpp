@@ -126,12 +126,9 @@ void edid_state::edid_gtf_mode(unsigned refresh, struct timings &t)
 
 // If rb == RB_CVT_V2, then alt means video-optimized (i.e. 59.94 instead of 60 Hz, etc.).
 // If rb == RB_CVT_V3, then alt means that rb_h_blank is 160 instead of 80.
-// Note: for RB_CVT_V3 this calculation is slightly different, but
-// since CVT 1.3 is not yet public, I cannot update the calculation yet. For now
-// it will follow V2. So RBv3 timings will be off for now.
 timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 				  double ip_freq_rqd, unsigned rb, bool int_rqd,
-				  bool margins_rqd, bool alt)
+				  bool margins_rqd, bool alt, unsigned rb_h_blank)
 {
 	timings t = {};
 
@@ -158,6 +155,14 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	double pixel_freq;
 	double v_blank;
 	double v_sync_bp;
+
+	if (rb == RB_CVT_V3 && rb_h_blank) {
+		h_blank = rb_h_blank & ~7;
+		if (h_blank < 80)
+			h_blank = 80;
+		else if (h_blank > 200)
+			h_blank = 200;
+	}
 
 	/* Determine VSync Width from aspect ratio */
 	if ((t.vact * 4 / 3) == t.hact)
@@ -204,8 +209,11 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 		else
 			v_sync_bp = v_sync + CVT_MIN_V_BPORCH;
 		double total_pixels = h_blank + total_active_pixels;
-		pixel_freq = floor((v_field_rate_rqd * total_v_lines * total_pixels / 1000000.0 *
-				    refresh_multiplier) / clock_step) * clock_step;
+		double freq = v_field_rate_rqd * total_v_lines * total_pixels * refresh_multiplier;
+		if (rb == RB_CVT_V3)
+			pixel_freq = ceil((freq / 1000000.0) / clock_step) * clock_step;
+		else
+			pixel_freq = floor((freq / 1000000.0) / clock_step) * clock_step;
 	}
 
 	t.vbp = v_sync_bp - v_sync;
@@ -213,8 +221,11 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	t.vfp = v_blank - t.vbp - t.vsync;
 	t.pixclk_khz = round(1000.0 * pixel_freq);
 	t.hsync = h_sync;
-	t.hfp = (h_blank / 2.0) - t.hsync;
-	t.hbp = t.hfp + t.hsync;
+	if (rb == RB_CVT_V3)
+		t.hfp = 8;
+	else
+		t.hfp = (h_blank / 2.0) - t.hsync;
+	t.hbp = h_blank - t.hfp - t.hsync;
 	t.hborder = hor_margin;
 	t.vborder = vert_margin;
 	t.rb = rb;

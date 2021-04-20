@@ -148,6 +148,8 @@ DMT 1.3: VESA and Industry Standards and Guidelines for Computer Display Monitor
 .TP
 CVT 1.2: VESA Coordinated Video Timings (CVT) Standard, Version 1.2
 .TP
+CVT 1.2: VESA CVT v1.2 Errata E1
+.TP
 GTF 1.1: VESA Generalized Timing Formula Standard, Version: 1.1
 .RE
 
@@ -253,7 +255,7 @@ Show the timings for this VIC.
 \fB\-\-hdmi\-vic\fR \fI<hdmivic>\fR
 Show the timings for this HDMI VIC.
 .TP
-\fB\-\-cvt\fR \fBw\fR=\fI<width>\fR,\fBh\fR=\fI<height>\fR,\fBfps\fR=\fI<fps>\fR[,\fBrb\fR=\fI<rb>\fR][,\fBinterlaced\fR][,\fBoverscan\fR][,\fBalt\fR]
+\fB\-\-cvt\fR \fBw\fR=\fI<width>\fR,\fBh\fR=\fI<height>\fR,\fBfps\fR=\fI<fps>\fR[,\fBrb\fR=\fI<rb>\fR][,\fBinterlaced\fR][,\fBoverscan\fR][,\fBalt\fR][,\fBhblank\fR=\fI<hblank>\fR]
 .br
 Calculate the CVT timings for the given format.
 
@@ -272,6 +274,9 @@ optimized for video: 1000 / 1001 * \fI<fps>\fR.
 .br
 If \fBalt\fR is given and \fI<rb>\fR=3, then the horizontal blanking
 is 160 instead of 80 pixels.
+.br
+If \fBhblank\fR is given and \fI<rb>\fR=3, then the horizontal blanking
+is \fI<hblank>\fR pixels (range of 80-200 and divisible by 8), overriding \fBalt\fR.
 .TP
 \fB\-\-gtf\fR \fBw\fR=\fI<width>\fR,\fBh\fR=\fI<height>\fR[,\fBfps\fR=\fI<fps>\fR][,\fBhorfreq\fR=\fI<horfreq>\fR][,\fBpixclk\fR=\fI<pixclk>\fR]
 [,\fBinterlaced\fR][,\fBoverscan\fR][,\fBsecondary\fR][,\fBC\fR=\fI<c>\fR][,\fBM\fR=\fI<m>\fR][,\fBK\fR=\fI<k>\fR][,\fBJ\fR=\fI<j>\fR]
