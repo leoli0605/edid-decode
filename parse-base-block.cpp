@@ -1297,6 +1297,17 @@ void edid_state::detailed_block(const unsigned char *x)
 	}
 }
 
+/*
+ * The sRGB chromaticities are (x, y):
+ * red:   0.640,  0.330
+ * green: 0.300,  0.600
+ * blue:  0.150,  0.060
+ * white: 0.3127, 0.3290
+ */
+static const unsigned char srgb_chromaticity[10] = {
+	0xee, 0x91, 0xa3, 0x54, 0x4c, 0x99, 0x26, 0x0f, 0x50, 0x54
+};
+
 void edid_state::parse_base_block(const unsigned char *x)
 {
 	time_t the_time;
@@ -1469,20 +1480,13 @@ void edid_state::parse_base_block(const unsigned char *x)
 	}
 
 	if (x[0x18] & 0x04) {
-		/*
-		 * The sRGB chromaticities are (x, y):
-		 * red:   0.640,  0.330
-		 * green: 0.300,  0.600
-		 * blue:  0.150,  0.060
-		 * white: 0.3127, 0.3290
-		 */
-		static const unsigned char srgb_chromaticity[10] = {
-			0xee, 0x91, 0xa3, 0x54, 0x4c, 0x99, 0x26, 0x0f, 0x50, 0x54
-		};
 		printf("    Default (sRGB) color space is primary color space\n");
 		if (memcmp(x + 0x19, srgb_chromaticity, sizeof(srgb_chromaticity)))
 			fail("sRGB is signaled, but the chromaticities do not match.\n");
+	} else if (!memcmp(x + 0x19, srgb_chromaticity, sizeof(srgb_chromaticity))) {
+		fail("The chromaticities match sRGB, but sRGB is not signaled.\n");
 	}
+
 	if (base.edid_minor >= 4) {
 		/* 1.4 always has a preferred timing and this bit means something else. */
 		has_preferred_timing = true;
