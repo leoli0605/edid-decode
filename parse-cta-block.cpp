@@ -1898,7 +1898,10 @@ void edid_state::cta_displayid_type_8(const unsigned char *x, unsigned length)
 
 void edid_state::cta_displayid_type_10(const unsigned char *x, unsigned length)
 {
-	check_displayid_datablock_revision(x[0], 0x70);
+	if (x[0] & 7)
+		check_displayid_datablock_revision(x[0], 0x70, 1);
+	else
+		check_displayid_datablock_revision(x[0], 0x70);
 	if (length < 7U + ((x[0] & 0x70) >> 4)) {
 		fail("Empty Data Block with length %u.\n", length);
 		return;
@@ -1908,7 +1911,7 @@ void edid_state::cta_displayid_type_10(const unsigned char *x, unsigned length)
 	x++;
 	length--;
 	for (unsigned i = 0; i < length / sz; i++)
-		parse_displayid_type_10_timing(x + i * sz, true);
+		parse_displayid_type_10_timing(x + i * sz, sz, x[0] & 7, true);
 }
 
 static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)

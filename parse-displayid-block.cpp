@@ -1366,7 +1366,9 @@ void edid_state::parse_displayid_ContainerID(const unsigned char *x)
 
 // tag 0x32
 
-void edid_state::parse_displayid_type_10_timing(const unsigned char *x, bool is_cta)
+void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
+						unsigned sz, unsigned block_rev,
+						bool is_cta)
 {
 	struct timings t = {};
 	std::string s("aspect ");
@@ -1399,13 +1401,17 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x, bool is_
 	default: break;
 	}
 
+	unsigned rb = t.rb;
+	unsigned rb_h_blank = rb == RB_CVT_V3 ? 80 : 0;
+
 	if (x[0] & 0x10) {
-		if (t.rb == RB_CVT_V2) {
+		if (rb == RB_CVT_V2) {
 			s += ", refresh rate * (1000/1001) supported";
 			t.rb |= RB_ALT;
-		} else if (t.rb == RB_CVT_V3) {
+		} else if (rb == RB_CVT_V3) {
 			s += ", hblank is 160 pixels";
 			t.rb |= RB_ALT;
+			rb_h_blank = 160;
 		} else {
 			fail("VR_HB must be 0.\n");
 		}
@@ -1413,7 +1419,25 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x, bool is_
 	if (x[0] & 0x80)
 		s += ", YCbCr 4:2:0";
 
-	edid_cvt_mode(1 + x[5], t);
+	unsigned refresh = 1 + x[5] + (sz == 6 ? 0 : ((x[6] & 3) << 8));
+	double add_vert_time = 0;
+
+	if (sz > 6 && block_rev > 0 && rb == RB_CVT_V3) {
+		unsigned delta_hblank = (x[6] >> 2) & 7;
+
+		if (rb_h_blank == 80)
+			rb_h_blank = 80 + 8 * delta_hblank;
+		else if (delta_hblank <= 5)
+			rb_h_blank = 160 + 8 * delta_hblank;
+		else
+			rb_h_blank = 160 - (delta_hblank - 5) * 8;
+
+		unsigned vblank_time_perc = (x[6] >> 5) & 7;
+
+		add_vert_time = (vblank_time_perc * 10000.0) / refresh;
+	}
+
+	edid_cvt_mode(refresh, t, rb_h_blank, add_vert_time);
 
 	print_timings("    ", &t, "CVT", s.c_str());
 	if (is_cta) {
@@ -1823,9 +1847,13 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 		case 0x32: {
 			   unsigned sz = 6 + ((x[offset + 1] & 0x70) >> 4);
 
-			   check_displayid_datablock_revision(x[offset + 1], 0x10);
+			   if (block_rev)
+				   check_displayid_datablock_revision(x[offset + 1], 0x70, 1);
+			   else
+				   check_displayid_datablock_revision(x[offset + 1], 0x70);
 			   for (i = 0; i < len / sz; i++)
-				   parse_displayid_type_10_timing(&x[offset + 3 + i * sz]);
+				   parse_displayid_type_10_timing(&x[offset + 3 + i * sz],
+								  sz, block_rev);
 			   break;
 		}
 		case 0x81: parse_displayid_cta_data_block(x + offset); break;

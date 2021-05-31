@@ -128,7 +128,8 @@ void edid_state::edid_gtf_mode(unsigned refresh, struct timings &t)
 // If rb == RB_CVT_V3, then alt means that rb_h_blank is 160 instead of 80.
 timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 				  double ip_freq_rqd, unsigned rb, bool int_rqd,
-				  bool margins_rqd, bool alt, unsigned rb_h_blank)
+				  bool margins_rqd, bool alt, unsigned rb_h_blank,
+				  double add_vert_time)
 {
 	timings t = {};
 
@@ -149,12 +150,18 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	double h_blank = (rb == RB_CVT_V1 || (rb == RB_CVT_V3 && alt)) ? 160 : 80;
 	double rb_v_fporch = rb == RB_CVT_V1 ? 3 : 1;
 	double refresh_multiplier = (rb == RB_CVT_V2 && alt) ? 1000.0 / 1001.0 : 1;
+	double rb_min_vblank = CVT_RB_MIN_VBLANK;
 	double h_sync = 32;
 
 	double v_sync;
 	double pixel_freq;
 	double v_blank;
 	double v_sync_bp;
+
+	if (rb == RB_CVT_V3 && add_vert_time) {
+		if (add_vert_time + rb_min_vblank <= 1000000.0 / ip_freq_rqd / 4.0)
+			rb_min_vblank += add_vert_time;
+	}
 
 	if (rb == RB_CVT_V3 && rb_h_blank) {
 		h_blank = rb_h_blank & ~7;
@@ -198,9 +205,9 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 		h_sync = floor(total_pixels * 0.08 / CELL_GRAN) * CELL_GRAN;
 		pixel_freq = floor((total_pixels / h_period_est) / clock_step) * clock_step;
 	} else {
-		double h_period_est = ((1000000.0 / v_field_rate_rqd) - CVT_RB_MIN_VBLANK) /
+		double h_period_est = ((1000000.0 / v_field_rate_rqd) - rb_min_vblank) /
 					(v_lines_rnd + vert_margin * 2);
-		double vbi_lines = floor(CVT_RB_MIN_VBLANK / h_period_est) + 1;
+		double vbi_lines = floor(rb_min_vblank / h_period_est) + 1;
 		double rb_min_vbi = rb_v_fporch + v_sync + CVT_MIN_V_BPORCH;
 		v_blank = vbi_lines < rb_min_vbi ? rb_min_vbi : vbi_lines;
 		double total_v_lines = v_blank + v_lines_rnd + vert_margin * 2 + interlace;
@@ -237,13 +244,14 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	return t;
 }
 
-void edid_state::edid_cvt_mode(unsigned refresh, struct timings &t)
+void edid_state::edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank,
+			       double add_vert_time)
 {
 	unsigned hratio = t.hratio;
 	unsigned vratio = t.vratio;
 
 	t = calc_cvt_mode(t.hact, t.vact, refresh, t.rb & ~RB_ALT, t.interlaced,
-			  false, t.rb & RB_ALT);
+			  false, t.rb & RB_ALT, rb_h_blank, add_vert_time);
 	t.hratio = hratio;
 	t.vratio = vratio;
 }

@@ -314,8 +314,9 @@ struct edid_state {
 	timings calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 			      double ip_freq_rqd, unsigned rb, bool int_rqd = false,
 			      bool margins_rqd = false, bool alt = false,
-			      unsigned rb_h_blank = 0);
-	void edid_cvt_mode(unsigned refresh, struct timings &t);
+			      unsigned rb_h_blank = 0, double add_vert_time = 0);
+	void edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank = 0,
+			   double add_vert_time = 0);
 	void detailed_cvt_descriptor(const char *prefix, const unsigned char *x, bool first);
 	void print_standard_timing(const char *prefix, unsigned char b1, unsigned char b2,
 				   bool gtf_only = false, bool show_both = false);
@@ -386,7 +387,8 @@ struct edid_state {
 	void parse_displayid_type_9_timing(const unsigned char *x);
 	void parse_displayid_dynamic_video_timings_range_limits(const unsigned char *x);
 	void parse_displayid_ContainerID(const unsigned char *x);
-	void parse_displayid_type_10_timing(const unsigned char *x, bool is_cta = false);
+	void parse_displayid_type_10_timing(const unsigned char *x, unsigned sz,
+					    unsigned block_rev, bool is_cta = false);
 	void preparse_displayid_block(const unsigned char *x);
 	void parse_displayid_block(const unsigned char *x);
 	void parse_displayid_vesa(const unsigned char *x);
