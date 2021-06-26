@@ -119,7 +119,10 @@ void edid_state::edid_gtf_mode(unsigned refresh, struct timings &t)
 
 #define CVT_MIN_VSYNC_BP 550.0
 #define CVT_MIN_V_PORCH 3
-#define CVT_MIN_V_BPORCH 6
+/* Minimum vertical backporch for CVT and CVT RBv1 */
+#define CVT_MIN_V_BPORCH 7
+/* Fixed vertical backporch for CVT RBv2 and RBv3 */
+#define CVT_FIXED_V_BPORCH 6
 #define CVT_C_PRIME 30.0
 #define CVT_M_PRIME 300.0
 #define CVT_RB_MIN_VBLANK 460.0
@@ -208,13 +211,14 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 		double h_period_est = ((1000000.0 / v_field_rate_rqd) - rb_min_vblank) /
 					(v_lines_rnd + vert_margin * 2);
 		double vbi_lines = floor(rb_min_vblank / h_period_est) + 1;
-		double rb_min_vbi = rb_v_fporch + v_sync + CVT_MIN_V_BPORCH;
+		double rb_min_vbi = rb_v_fporch + v_sync +
+			(rb == RB_CVT_V1 ? CVT_MIN_V_BPORCH : CVT_FIXED_V_BPORCH);
 		v_blank = vbi_lines < rb_min_vbi ? rb_min_vbi : vbi_lines;
 		double total_v_lines = v_blank + v_lines_rnd + vert_margin * 2 + interlace;
 		if (rb == RB_CVT_V1)
 			v_sync_bp = v_blank - rb_v_fporch;
 		else
-			v_sync_bp = v_sync + CVT_MIN_V_BPORCH;
+			v_sync_bp = v_sync + CVT_FIXED_V_BPORCH;
 		double total_pixels = h_blank + total_active_pixels;
 		double freq = v_field_rate_rqd * total_v_lines * total_pixels * refresh_multiplier;
 		if (rb == RB_CVT_V3)
