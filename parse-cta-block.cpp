@@ -921,6 +921,7 @@ static void cta_hf_eeodb(const unsigned char *x, unsigned length)
 static void cta_hf_scdb(const unsigned char *x, unsigned length)
 {
 	unsigned rate = x[1] * 5;
+	unsigned v;
 
 	printf("    Version: %u\n", x[0]);
 	if (rate) {
@@ -985,8 +986,20 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 	if (length <= 5)
 		return;
 
-	printf("    VRRmin: %d Hz\n", x[5] & 0x3f);
-	printf("    VRRmax: %d Hz\n", (x[5] & 0xc0) << 2 | x[6]);
+	v = x[5] & 0x3f;
+	if (v) {
+		printf("    VRRmin: %u Hz\n", v);
+		if (v > 48)
+			fail("VRRmin > 48.\n");
+	}
+	v = (x[5] & 0xc0) << 2 | x[6];
+	if (v) {
+		printf("    VRRmax: %u Hz\n", v);
+		if (!(x[5] & 0x3f))
+			fail("VRRmin == 0, but VRRmax isn't.\n");
+		else if (v < 100)
+			fail("VRRmax < 100.\n");
+	}
 
 	if (length <= 7)
 		return;
