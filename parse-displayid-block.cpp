@@ -1367,8 +1367,7 @@ void edid_state::parse_displayid_ContainerID(const unsigned char *x)
 // tag 0x32
 
 void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
-						unsigned sz, unsigned block_rev,
-						bool is_cta)
+						unsigned sz, bool is_cta)
 {
 	struct timings t = {};
 	std::string s("aspect ");
@@ -1422,7 +1421,7 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 	unsigned refresh = 1 + x[5] + (sz == 6 ? 0 : ((x[6] & 3) << 8));
 	double add_vert_time = 0;
 
-	if (sz > 6 && block_rev > 0 && rb == RB_CVT_V3) {
+	if (sz > 6 && rb == RB_CVT_V3) {
 		unsigned delta_hblank = (x[6] >> 2) & 7;
 
 		if (rb_h_blank == 80)
@@ -1847,13 +1846,9 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 		case 0x32: {
 			   unsigned sz = 6 + ((x[offset + 1] & 0x70) >> 4);
 
-			   if (block_rev)
-				   check_displayid_datablock_revision(x[offset + 1], 0x70, 1);
-			   else
-				   check_displayid_datablock_revision(x[offset + 1], 0x70);
+			   check_displayid_datablock_revision(x[offset + 1], 0x70);
 			   for (i = 0; i < len / sz; i++)
-				   parse_displayid_type_10_timing(&x[offset + 3 + i * sz],
-								  sz, block_rev);
+				   parse_displayid_type_10_timing(&x[offset + 3 + i * sz], sz);
 			   break;
 		}
 		case 0x81: parse_displayid_cta_data_block(x + offset); break;
