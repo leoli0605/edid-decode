@@ -616,7 +616,7 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 	std::string range_class;
 
 	data_block = "Display Range Limits";
-	printf("  %s:\n", data_block.c_str());
+	printf("    %s:\n", data_block.c_str());
 	base.has_display_range_descriptor = 1;
 
 	if (base.edid_minor >= 4) {
@@ -680,7 +680,7 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 		fail("Min horizontal freq > max horizontal freq.\n");
 	base.min_display_hor_freq_hz = (x[7] + h_min_offset) * 1000;
 	base.max_display_hor_freq_hz = (x[8] + h_max_offset) * 1000;
-	printf("    Monitor ranges (%s): %d-%d Hz V, %d-%d kHz H",
+	printf("      Monitor ranges (%s): %d-%d Hz V, %d-%d kHz H",
 	       range_class.c_str(),
 	       x[5] + v_min_offset, x[6] + v_max_offset,
 	       x[7] + h_min_offset, x[8] + h_max_offset);
@@ -712,22 +712,22 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 		if (memchk(x + 12, 6)) {
 			fail("Zeroed Secondary Curve Block.\n");
 		} else {
-			printf("    GTF Secondary Curve Block:\n");
-			printf("      Start frequency: %u kHz\n", x[12] * 2);
-			printf("      C: %.1f%%\n", x[13] / 2.0);
-			printf("      M: %u%%/kHz\n", (x[15] << 8) | x[14]);
-			printf("      K: %u\n", x[16]);
-			printf("      J: %.1f%%\n", x[17] / 2.0);
+			printf("      GTF Secondary Curve Block:\n");
+			printf("        Start frequency: %u kHz\n", x[12] * 2);
+			printf("        C: %.1f%%\n", x[13] / 2.0);
+			printf("        M: %u%%/kHz\n", (x[15] << 8) | x[14]);
+			printf("        K: %u\n", x[16]);
+			printf("        J: %.1f%%\n", x[17] / 2.0);
 		}
 	} else if (is_cvt) {
 		int max_h_pixels = 0;
 
-		printf("    CVT version %d.%d\n", (x[11] & 0xf0) >> 4, x[11] & 0x0f);
+		printf("      CVT version %d.%d\n", (x[11] & 0xf0) >> 4, x[11] & 0x0f);
 
 		if (x[12] & 0xfc) {
 			unsigned raw_offset = (x[12] & 0xfc) >> 2;
 
-			printf("    Real max dotclock: %.2f MHz\n",
+			printf("      Real max dotclock: %.2f MHz\n",
 			       (x[9] * 10) - (raw_offset * 0.25));
 			if (raw_offset >= 40)
 				warn("CVT block corrects dotclock by more than 9.75 MHz.\n");
@@ -738,9 +738,9 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 		max_h_pixels |= x[13];
 		max_h_pixels *= 8;
 		if (max_h_pixels)
-			printf("    Max active pixels per line: %d\n", max_h_pixels);
+			printf("      Max active pixels per line: %d\n", max_h_pixels);
 
-		printf("    Supported aspect ratios:%s%s%s%s%s\n",
+		printf("      Supported aspect ratios:%s%s%s%s%s\n",
 		       x[14] & 0x80 ? " 4:3" : "",
 		       x[14] & 0x40 ? " 16:9" : "",
 		       x[14] & 0x20 ? " 16:10" : "",
@@ -749,7 +749,7 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 		if (x[14] & 0x07)
 			fail("Reserved bits of byte 14 are non-zero.\n");
 
-		printf("    Preferred aspect ratio: ");
+		printf("      Preferred aspect ratio: ");
 		switch ((x[15] & 0xe0) >> 5) {
 		case 0x00:
 			printf("4:3");
@@ -775,30 +775,30 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 		printf("\n");
 
 		if (x[15] & 0x08)
-			printf("    Supports CVT standard blanking\n");
+			printf("      Supports CVT standard blanking\n");
 		if (x[15] & 0x10)
-			printf("    Supports CVT reduced blanking\n");
+			printf("      Supports CVT reduced blanking\n");
 
 		if (x[15] & 0x07)
 			fail("Reserved bits of byte 15 are non-zero.\n");
 
 		if (x[16] & 0xf0) {
-			printf("    Supported display scaling:\n");
+			printf("      Supported display scaling:\n");
 			if (x[16] & 0x80)
-				printf("      Horizontal shrink\n");
+				printf("        Horizontal shrink\n");
 			if (x[16] & 0x40)
-				printf("      Horizontal stretch\n");
+				printf("        Horizontal stretch\n");
 			if (x[16] & 0x20)
-				printf("      Vertical shrink\n");
+				printf("        Vertical shrink\n");
 			if (x[16] & 0x10)
-				printf("      Vertical stretch\n");
+				printf("        Vertical stretch\n");
 		}
 
 		if (x[16] & 0x0f)
 			fail("Reserved bits of byte 16 are non-zero.\n");
 
 		if (x[17])
-			printf("    Preferred vertical refresh: %d Hz\n", x[17]);
+			printf("      Preferred vertical refresh: %d Hz\n", x[17]);
 		else
 			warn("CVT block does not set preferred refresh rate.\n");
 	} else {
