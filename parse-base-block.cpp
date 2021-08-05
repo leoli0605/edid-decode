@@ -1176,6 +1176,8 @@ void edid_state::detailed_block(const unsigned char *x)
 				sprintf(type, "DMT 0x%02x", dmt_id);
 				print_timings("      ", find_dmt_id(dmt_id), type);
 			}
+		if (base.edid_minor < 4)
+			fail("Not allowed for EDID < 1.4.\n");
 		return;
 	case 0xf8:
 		data_block = "CVT 3 Byte Timing Codes";
@@ -1186,6 +1188,8 @@ void edid_state::detailed_block(const unsigned char *x)
 		}
 		for (i = 0; i < 4; i++)
 			detailed_cvt_descriptor("      ", x + 6 + (i * 3), !i);
+		if (base.edid_minor < 4)
+			fail("Not allowed for EDID < 1.4.\n");
 		return;
 	case 0xf9:
 		data_block = "Display Color Management Data";
