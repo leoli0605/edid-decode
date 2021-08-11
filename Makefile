@@ -11,7 +11,7 @@ WARN_FLAGS = -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter
 all: edid-decode
 
 sha = -DSHA=$(shell if test -d .git ; then git rev-parse --short=12 HEAD ; fi)
-date = -DDATE=$(shell if test -d .git ; then printf '"'; TZ=UTC git show --quiet --date='format-local:%F %T"' --format="%cd"; fi)
+date = -DDATE=$(shell if test -d .git ; then TZ=UTC git show --quiet --date='format-local:"%F %T"' --format='%cd'; fi)
 
 edid-decode: $(SOURCES) edid-decode.h Makefile
 	$(CXX) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $(WARN_FLAGS) -g $(sha) $(date) -o $@ $(SOURCES) -lm
