@@ -701,9 +701,9 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 		base.max_display_pixclk_khz = x[9] * 10000;
 		printf(", max dotclock %d MHz\n", x[9] * 10);
 	} else {
+		printf("\n");
 		if (base.edid_minor >= 4)
 			fail("EDID 1.4 block does not set max dotclock.\n");
-		printf("\n");
 	}
 
 	if (has_sec_gtf) {
