@@ -17,16 +17,27 @@ void edid_state::parse_vtb_ext_block(const unsigned char *x)
 	unsigned num_cvt = x[3];
 	unsigned num_st = x[4];
 
+	const unsigned char *y = x + 0x7f;
 	x += 5;
 	if (num_dtd) {
 		printf("  Detailed Timing Descriptors:\n");
-		for (unsigned i = 0; i < num_dtd; i++, x += 18)
+		for (unsigned i = 0; i < num_dtd; i++, x += 18) {
+			if (x + 18 > y) {
+				fail("Not enough bytes remain for more DTDs in the VTB-EXT.\n");
+				return;
+			}
 			detailed_timings("    ", x, false);
+		}
 	}
 	if (num_cvt) {
 		printf("  Coordinated Video Timings:\n");
-		for (unsigned i = 0; i < num_cvt; i++, x += 3)
+		for (unsigned i = 0; i < num_cvt; i++, x += 3) {
+			if (x + 3 > y) {
+				fail("Not enough bytes remain for more CVTs in the VTB-EXT.\n");
+				return;
+			}
 			detailed_cvt_descriptor("    ", x, false);
+		}
 	}
 	if (num_st) {
 		// Note: the VTB-EXT standard has a mistake in the example EDID
@@ -36,7 +47,12 @@ void edid_state::parse_vtb_ext_block(const unsigned char *x)
 		//
 		// The documentation itself is correct, though.
 		printf("  Standard Timings:\n");
-		for (unsigned i = 0; i < num_st; i++, x += 2)
+		for (unsigned i = 0; i < num_st; i++, x += 2) {
+			if (x + 2 > y) {
+				fail("Not enough bytes remain for more STs in the VTB-EXT.\n");
+				return;
+			}
 			print_standard_timing("    ", x[0], x[1], true);
+		}
 	}
 }
