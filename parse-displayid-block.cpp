@@ -270,10 +270,12 @@ void edid_state::parse_displayid_type_1_7_timing(const unsigned char *x,
 		t.hratio = 256;
 		t.vratio = 135;
 		break;
-	default:
+	case 8:
 		s += "undefined";
-		if ((x[3] & 0xf) > (dispid.version <= 0x12 ? 7 : 8))
-			fail("Unknown aspect 0x%02x.\n", x[3] & 0xf);
+		break;
+	default:
+		s += "reserved";
+		fail("Unknown aspect 0x%02x.\n", x[3] & 0xf);
 		break;
 	}
 	switch ((x[3] >> 5) & 0x3) {
@@ -455,10 +457,12 @@ void edid_state::parse_displayid_type_3_timing(const unsigned char *x)
 		t.hratio = 256;
 		t.vratio = 135;
 		break;
-	default:
+	case 8:
 		s += "undefined";
-		if ((x[3] & 0xf) > (dispid.version <= 0x12 ? 7 : 8))
-			fail("Unknown aspect 0x%02x.\n", x[3] & 0xf);
+		break;
+	default:
+		s += "reserved";
+		fail("Unknown aspect 0x%02x.\n", x[0] & 0xf);
 		break;
 	}
 
