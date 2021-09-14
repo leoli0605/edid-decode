@@ -1461,22 +1461,37 @@ void edid_state::parse_displayid_vesa(const unsigned char *x)
 	unsigned len = x[2];
 	x += 6;
 	printf("    Data Structure Type: ");
-	switch (x[0] & 0x07) {
-	case 0x00: printf("eDP\n"); break;
-	case 0x01: printf("DP\n"); break;
-	default: printf("Reserved\n"); break;
+	switch (x[0] & 7) {
+	case 0: printf("eDP\n"); break;
+	case 1: printf("DP\n"); break;
+	default: printf("Reserved (%d)\n", x[0] & 7); break;
 	}
+
+	if ((x[0] >> 3) & 15)
+		warn("Reserved bits 6:3 (%d) are not 0.\n", (x[0] >> 3) & 15);
+
 	printf("    Default Colorspace and EOTF Handling: %s\n",
 	       (x[0] & 0x80) ? "Native as specified in the Display Parameters DB" : "sRGB");
+
 	printf("    Number of Pixels in Hor Pix Cnt Overlapping an Adjacent Panel: %u\n",
 	       x[1] & 0xf);
+	if ((x[1] & 0xf) > 8)
+		warn("Number of Pixels in Hor Pix Cnt Overlapping an Adjacent Panel exceeds 8.\n");
+
+	if ((x[1] >> 4) & 1)
+		warn("Reserved bit 4 is not 0.\n");
+
 	printf("    Multi-SST Operation: ");
-	switch ((x[1] >> 5) & 0x03) {
-	case 0x00: printf("Not Supported\n"); break;
-	case 0x01: printf("Two Streams (number of links shall be 2 or 4)\n"); break;
-	case 0x02: printf("Four Streams (number of links shall be 4)\n"); break;
-	case 0x03: printf("Reserved\n"); break;
+	switch ((x[1] >> 5) & 3) {
+	case 0: printf("Not Supported\n"); break;
+	case 1: printf("Two Streams (number of links shall be 2 or 4)\n"); break;
+	case 2: printf("Four Streams (number of links shall be 4)\n"); break;
+	case 3: printf("Reserved\n"); warn("Invalid option for Multi-SST Operation.\n"); break;
 	}
+
+	if ((x[1] >> 7) & 1)
+		warn("Reserved bit 7 is not 0.\n");
+
 	if (len >= 7) {
 		double bpp = (x[2] & 0x3f) + (x[3] & 0x0f) / 16.0;
 		printf("    Pass through timing's target DSC bits per pixel: %.4f\n", bpp);
