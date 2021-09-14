@@ -1,5 +1,16 @@
-bindir ?= /usr/bin
-mandir ?= /usr/share/man
+ifeq ($(OS),Windows_NT)
+	bindir ?= /usr/bin
+	mandir ?= /usr/share/man
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Darwin)
+		bindir ?= /usr/local/sbin
+		mandir ?= /usr/local/share/man
+	else
+		bindir ?= /usr/bin
+		mandir ?= /usr/share/man
+	endif
+endif
 
 EMXX ?= em++
 
