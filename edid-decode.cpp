@@ -513,6 +513,7 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 	if (t->interlaced)
 		vact /= 2;
 
+	double out_hor_freq_khz = hor_freq_khz;
 	if (t->ycbcr420)
 		hor_freq_khz /= 2;
 
@@ -558,6 +559,7 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 		dtd_max_vsize_mm = t->vsize_mm;
 	if (!s.empty())
 		s = " (" + s + ")";
+	unsigned out_pixclk_khz = t->pixclk_khz;
 	unsigned pixclk_khz = t->pixclk_khz / (t->ycbcr420 ? 2 : 1);
 
 	char buf[10];
@@ -568,8 +570,8 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 	       t->hact, buf,
 	       refresh,
 	       t->hratio, t->vratio,
-	       hor_freq_khz,
-	       pixclk_khz / 1000.0,
+	       out_hor_freq_khz,
+	       out_pixclk_khz / 1000.0,
 	       s.c_str());
 
 	unsigned len = strlen(prefix) + 2;
