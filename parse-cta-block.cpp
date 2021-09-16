@@ -269,6 +269,8 @@ static std::string audio_ext_format(unsigned char x)
 	case 11: return "MPEG-H 3D Audio";
 	case 12: return "AC-4";
 	case 13: return "L-PCM 3D Audio";
+	case 14: return "Auro-Cx";
+	case 15: return "MPEG-D USAC";
 	default: break;
 	}
 	fail("Unknown Audio Ext Format 0x%02x.\n", x);
@@ -345,8 +347,23 @@ static void cta_audio_block(const unsigned char *x, unsigned length)
 			printf("      Max channels: %u\n",
 			       (((x[i + 1] & 0x80) >> 3) | ((x[i] & 0x80) >> 4) |
 				(x[i] & 0x07))+1);
+		else if ((ext_format == 12 || ext_format == 14) && (x[i] & 0x07))
+			fail("Bits F10-F12 must be 0.\n");
 		else
 			printf("      Max channels: %u\n", (x[i] & 0x07)+1);
+
+		if ((format == 1 || format == 14) && (x[i + 2] & 0xf8))
+			fail("Bits F33-F37 must be 0.\n");
+		if (ext_format != 13 && (x[i+1] & 0x80))
+			fail("Bit F27 must be 0.\n");
+
+		// Several sample rates are not supported in certain formats
+		if (ext_format == 12 && (x[i+1] & 0x29))
+			fail("Bits F20, F23 and F25 must be 0.\n");
+		if (ext_format >= 4 && ext_format <= 6 && (x[i+1] & 0x60))
+			fail("Bits F25 and F26 must be 0.\n");
+		if ((ext_format == 8 || ext_format == 10 || ext_format == 15) && (x[i+1] & 0x60))
+			fail("Bits F25 and F26 must be 0.\n");
 
 		printf("      Supported sample rates (kHz):%s%s%s%s%s%s%s\n",
 		       (x[i+1] & 0x40) ? " 192" : "",
@@ -394,6 +411,8 @@ static void cta_audio_block(const unsigned char *x, unsigned length)
 				       (x[i+2] & 1) ? "implicitly and explicitly" : "only implicitly");
 			if (ext_format == 6 && (x[i+2] & 1))
 				printf("      Supports 22.2ch System H\n");
+		} else if (ext_format == 12 || ext_format == 14) {
+			printf("      Audio Format Code dependent value: %u\n", x[i+2] & 7);
 		}
 	}
 }
