@@ -1817,7 +1817,7 @@ void edid_state::cta_vcdb(const unsigned char *x, unsigned length)
 		warn("S_PT is equal to S_IT and S_CE, so should be set to 0 instead.\n");
 }
 
-static const char *colorimetry_map[] = {
+static const char *colorimetry1_map[] = {
 	"xvYCC601",
 	"xvYCC709",
 	"sYCC601",
@@ -1828,6 +1828,17 @@ static const char *colorimetry_map[] = {
 	"BT2020RGB",
 };
 
+static const char *colorimetry2_map[] = {
+	"Reserved MD0",
+	"Reserved MD1",
+	"Reserved MD2",
+	"Reserved MD3",
+	"Default",
+	"sRGB",
+	"ICtCp",
+	"ST2113RGB",
+};
+
 static void cta_colorimetry_block(const unsigned char *x, unsigned length)
 {
 	unsigned i;
@@ -1836,14 +1847,14 @@ static void cta_colorimetry_block(const unsigned char *x, unsigned length)
 		fail("Empty Data Block with length %u.\n", length);
 		return;
 	}
-	for (i = 0; i < ARRAY_SIZE(colorimetry_map); i++) {
+	for (i = 0; i < ARRAY_SIZE(colorimetry1_map); i++)
 		if (x[0] & (1 << i))
-			printf("    %s\n", colorimetry_map[i]);
-	}
-	if (x[1] & 0x80)
-		printf("    DCI-P3\n");
-	if (x[1] & 0x40)
-		printf("    ICtCp\n");
+			printf("    %s\n", colorimetry1_map[i]);
+	if (x[1] & 0xf)
+		fail("Reserved bits MD0-MD3 must be 0.\n");
+	for (i = 0; i < ARRAY_SIZE(colorimetry2_map); i++)
+		if (x[1] & (1 << i))
+			printf("    %s\n", colorimetry2_map[i]);
 }
 
 static const char *eotf_map[] = {
