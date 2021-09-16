@@ -189,12 +189,7 @@ static const struct timings edid_cta_modes2[] = {
 	{  4096, 2160, 256, 135, 1188000, 0, false,   88,  88, 128, true,   8, 10,  72, true  },
 };
 
-struct edid_rid {
-	unsigned hact, vact;
-	unsigned hratio, vratio;
-};
-
-static const edid_rid rids[] = {
+static const cta_rid rids[] = {
 	/* RID 0-9 */
 	{     0,    0,  0,  0 },
 	{  1280,  720, 16,  9 },
@@ -229,6 +224,41 @@ static const edid_rid rids[] = {
 	{ 20480, 8640, 64, 27 },
 };
 
+static const unsigned char rid2vic[ARRAY_SIZE(rids)][8] = {
+	/* RID 0-9 */
+	{},
+	{  60,  61,  62, 108,  19,   4,  41,  47 },
+	{  65,  66,  67, 109,  68,  69,  70,  71 },
+	{  79,  80,  81, 110,  82,  83,  84,  85 },
+	{  32,  33,  34, 111,  31,  16,  64,  63 },
+	{  72,  73,  74, 112,  75,  76,  77,  78 },
+	{  86,  87,  88, 113,  89,  90,  91,  92 },
+	{},
+	{},
+	{},
+	/* RID 10-19 */
+	{},
+	{  93,  94,  95, 114,  96,  97, 117, 118 },
+	{ 103, 104, 105, 116, 106, 107, 119, 120 },
+	{ 121, 122, 123, 124, 125, 126, 127, 193 },
+	{},
+	{},
+	{},
+	{},
+	{},
+	{ 194, 195, 196, 197, 198, 199, 200, 201 },
+	/* RID 20-28 */
+	{ 202, 203, 204, 205, 206, 207, 208, 209 },
+	{ 210, 211, 212, 213, 214, 215, 216, 217 },
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+};
+
 static const unsigned vf_rate_values[] = {
 	/* Rate Index 0-7 */
 	  0,  24,  25,  30,  48,  50,  60, 100,
@@ -259,6 +289,20 @@ const struct timings *find_hdmi_vic_id(unsigned char hdmi_vic)
 	if (hdmi_vic > 0 && hdmi_vic <= ARRAY_SIZE(edid_hdmi_mode_map))
 		return find_vic_id(edid_hdmi_mode_map[hdmi_vic - 1]);
 	return NULL;
+}
+
+const struct cta_rid *find_rid(unsigned char rid)
+{
+	if (rid > 0 && rid < ARRAY_SIZE(rids))
+		return &rids[rid];
+	return NULL;
+}
+
+static unsigned char rid_to_vic(unsigned char rid, unsigned char rate_index)
+{
+	if (vf_rate_values[rate_index] > 120)
+		return 0;
+	return rid2vic[rid][rate_index - 1];
 }
 
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic)
@@ -296,6 +340,41 @@ void edid_state::cta_list_hdmi_vics()
 
 		sprintf(type, "HDMI VIC %u", i + 1);
 		print_timings("", find_vic_id(vic), type, "", false, false);
+	}
+}
+
+void edid_state::cta_list_rids()
+{
+	for (unsigned i = 1; i < ARRAY_SIZE(rids); i++) {
+		printf("RID %2u: %5ux%-4u %2u:%-2u\n", i,
+		       rids[i].hact, rids[i].vact,
+		       rids[i].hratio, rids[i].vratio);
+	}
+}
+
+void edid_state::cta_list_rid_timings(unsigned list_rid)
+{
+	for (unsigned rid = 1; rid < ARRAY_SIZE(rids); rid++) {
+		char type[16];
+
+		if (list_rid && rid != list_rid)
+			continue;
+
+		sprintf(type, "RID %u", rid);
+		for (unsigned i = 1; i < ARRAY_SIZE(vf_rate_values); i++) {
+			unsigned fps = vf_rate_values[i];
+
+			if (rid_to_vic(rid, i)) {
+				printf("%s: %5ux%-4u  %7.3f Hz %3u:%-2u maps to VIC %u\n", type,
+				       rids[rid].hact, rids[rid].vact, (double)fps,
+				       rids[rid].hratio, rids[rid].vratio,
+				       rid_to_vic(rid, i));
+				continue;
+			}
+			timings t = calc_ovt_mode(rids[rid].hact, rids[rid].vact,
+						  rids[rid].hratio, rids[rid].vratio, fps);
+			print_timings("", &t, type, "", false, false);
+		}
 	}
 }
 

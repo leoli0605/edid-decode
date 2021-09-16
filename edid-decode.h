@@ -118,6 +118,11 @@ enum gtf_ip_parm {
 
 typedef std::vector<timings_ext> vec_timings_ext;
 
+struct cta_rid {
+	unsigned hact, vact;
+	unsigned hratio, vratio;
+};
+
 struct cta_vfd {
 	unsigned char rid;
 	unsigned char fr_factor;
@@ -391,6 +396,8 @@ struct edid_state {
 	void check_cta_blocks();
 	void cta_list_vics();
 	void cta_list_hdmi_vics();
+	void cta_list_rids();
+	void cta_list_rid_timings(unsigned list_rid = 0);
 
 	void set_displayid_native_res(unsigned w, unsigned h);
 	void parse_digital_interface(const unsigned char *x);
@@ -505,6 +512,7 @@ bool timings_close_match(const timings &t1, const timings &t2);
 const struct timings *find_dmt_id(unsigned char dmt_id);
 const struct timings *close_match_to_dmt(const timings &t, unsigned &dmt);
 const struct timings *find_vic_id(unsigned char vic);
+const struct cta_rid *find_rid(unsigned char rid);
 const struct timings *find_hdmi_vic_id(unsigned char hdmi_vic);
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic);
 unsigned char hdmi_vic_to_vic(unsigned char hdmi_vic);

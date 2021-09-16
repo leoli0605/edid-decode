@@ -328,6 +328,11 @@ The default secondary curve parameters are 40 for \fI<c>\fR, 600 for \fI<m>\fR,
 128 for \fI<k>\fR and 20 for \fI<j>\fR.
 These values correspond to the normal curve that GTF uses.
 .TP
+\fB\-\-ovt\fR (\fBrid\fR=\fI<rid>\fR|\fBw\fR=\fI<width>\fR,\fBh\fR=\fI<height>\fR),\fBfps\fR=\fI<fps>\fR
+Calculate the OVT timings for the given format.
+Either specify a \fI<rid>\fR or specify \fI<width>\fR and \fI<height>\fR.
+\fI<fps>\fR is frames per second.
+.TP
 \fB\-\-list\-established\-timings\fR
 List all known Established Timings.
 .TP
@@ -339,6 +344,12 @@ List all known VICs.
 .TP
 \fB\-\-list\-hdmi\-vics\fR
 List all known HDMI VICs.
+.TP
+\fB\-\-list\-rids\fR
+List all known CTA-861 RIDs.
+.TP
+\fB\-\-list\-rid\-timings\fR \fI<rid>\fR
+List all timings for the specified \fI<rid>\fR or all known RIDs if \fI<rid>\fR is 0.
 
 .PP
 .SH NOTES

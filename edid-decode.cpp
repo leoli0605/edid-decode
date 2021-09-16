@@ -65,10 +65,13 @@ enum Option {
 	OptHDMIVIC,
 	OptCVT,
 	OptGTF,
+	OptOVT,
 	OptListEstTimings,
 	OptListDMTs,
 	OptListVICs,
 	OptListHDMIVICs,
+	OptListRIDTimings,
+	OptListRIDs,
 	OptLast = 256
 };
 
@@ -100,10 +103,13 @@ static struct option long_options[] = {
 	{ "hdmi-vic", required_argument, 0, OptHDMIVIC },
 	{ "cvt", required_argument, 0, OptCVT },
 	{ "gtf", required_argument, 0, OptGTF },
+	{ "ovt", required_argument, 0, OptOVT },
 	{ "list-established-timings", no_argument, 0, OptListEstTimings },
 	{ "list-dmts", no_argument, 0, OptListDMTs },
 	{ "list-vics", no_argument, 0, OptListVICs },
 	{ "list-hdmi-vics", no_argument, 0, OptListHDMIVICs },
+	{ "list-rid-timings", required_argument, 0, OptListRIDTimings },
+	{ "list-rids", no_argument, 0, OptListRIDs },
 	{ 0, 0, 0, 0 }
 };
 
@@ -175,10 +181,15 @@ static void usage(void)
 	       "                        If 'secondary' is given, then the secondary GTF is used for\n"
 	       "                        reduced blanking, where <c>, <m>, <k> and <j> are parameters\n"
 	       "                        for the secondary curve.\n"
+	       "  --ovt (rid=<rid>|w=<width>,h=<height>),fps=<fps>\n"
+	       "                        Calculate the OVT timings for the given format.\n"
+	       "                        Either specify a RID or explicitly specify width and height.\n"
 	       "  --list-established-timings List all known Established Timings.\n"
 	       "  --list-dmts           List all known DMTs.\n"
 	       "  --list-vics           List all known VICs.\n"
 	       "  --list-hdmi-vics      List all known HDMI VICs.\n"
+	       "  --list-rids           List all known RIDs.\n"
+	       "  --list-rid-timings <rid> List all timings for RID <rid> or all known RIDs if <rid> is 0.\n"
 	       "  -h, --help            Display this help message.\n");
 }
 
@@ -1823,11 +1834,101 @@ static void show_gtf(gtf_parsed_data &data)
 	state.print_timings("", &t, "GTF", "", true, false);
 }
 
+enum ovt_opts {
+	OVT_RID,
+	OVT_WIDTH,
+	OVT_HEIGHT,
+	OVT_FPS,
+};
+
+static int parse_ovt_subopt(char **subopt_str, unsigned *value)
+{
+	int opt;
+	char *opt_str;
+
+	static const char * const subopt_list[] = {
+		"rid",
+		"w",
+		"h",
+		"fps",
+		nullptr
+	};
+
+	opt = getsubopt(subopt_str, (char* const*) subopt_list, &opt_str);
+
+	if (opt == -1) {
+		fprintf(stderr, "Invalid suboptions specified.\n");
+		usage();
+		std::exit(EXIT_FAILURE);
+	}
+	if (opt_str == nullptr) {
+		fprintf(stderr, "No value given to suboption <%s>.\n",
+				subopt_list[opt]);
+		usage();
+		std::exit(EXIT_FAILURE);
+	}
+
+	if (opt_str)
+		*value = strtoul(opt_str, NULL, 0);
+	return opt;
+}
+
+static void parse_ovt(char *optarg)
+{
+	unsigned rid = 0;
+	unsigned w = 0, h = 0;
+	unsigned fps = 0;
+
+	while (*optarg != '\0') {
+		int opt;
+		unsigned opt_val;
+
+		opt = parse_ovt_subopt(&optarg, &opt_val);
+
+		switch (opt) {
+		case OVT_RID:
+			rid = opt_val;
+			break;
+		case OVT_WIDTH:
+			w = opt_val;
+			break;
+		case OVT_HEIGHT:
+			h = opt_val;
+			break;
+		case OVT_FPS:
+			fps = opt_val;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if ((!rid && (!w || !h)) || !fps) {
+		fprintf(stderr, "Missing rid, width, height and/or fps.\n");
+		usage();
+		std::exit(EXIT_FAILURE);
+	}
+	unsigned hratio = 0, vratio = 0;
+	if (rid) {
+		const cta_rid *r = find_rid(rid);
+
+		if (r) {
+			w = r->hact;
+			h = r->vact;
+			hratio = r->hratio;
+			vratio = r->vratio;
+		}
+	}
+	timings t = state.calc_ovt_mode(w, h, hratio, vratio, fps);
+	state.print_timings("", &t, "OVT", "", true, false);
+}
+
 int main(int argc, char **argv)
 {
 	char short_options[26 * 2 * 2 + 1];
 	enum output_format out_fmt = OUT_FMT_DEFAULT;
 	gtf_parsed_data gtf_data;
+	unsigned list_rid = 0;
 	int ret;
 
 	while (1) {
@@ -1918,6 +2019,12 @@ int main(int argc, char **argv)
 		case OptGTF:
 			parse_gtf(optarg, gtf_data);
 			break;
+		case OptOVT:
+			parse_ovt(optarg);
+			break;
+		case OptListRIDTimings:
+			list_rid = strtoul(optarg, NULL, 0);
+			break;
 		case ':':
 			fprintf(stderr, "Option '%s' requires a value.\n",
 				argv[optind]);
@@ -1946,13 +2053,18 @@ int main(int argc, char **argv)
 		state.cta_list_vics();
 	if (options[OptListHDMIVICs])
 		state.cta_list_hdmi_vics();
+	if (options[OptListRIDs])
+		state.cta_list_rids();
+	if (options[OptListRIDTimings])
+		state.cta_list_rid_timings(list_rid);
 
 	if (options[OptListEstTimings] || options[OptListDMTs] ||
-	    options[OptListVICs] || options[OptListHDMIVICs])
+	    options[OptListVICs] || options[OptListHDMIVICs] ||
+	    options[OptListRIDs] || options[OptListRIDTimings])
 		return 0;
 
 	if (options[OptCVT] || options[OptDMT] || options[OptVIC] ||
-	    options[OptHDMIVIC] || options[OptSTD])
+	    options[OptHDMIVIC] || options[OptSTD] || options[OptOVT])
 		return 0;
 
 	if (options[OptGTF] && (!gtf_data.params_from_edid || optind == argc)) {
