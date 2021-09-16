@@ -1456,7 +1456,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 	if (x[0x17] == 0xff)
 		printf("    Gamma is defined in an extension block\n");
 	else
-		printf("    Gamma: %.2f\n", ((x[0x17] + 100.0) / 100.0));
+		printf("    Gamma: %.2f\n", (x[0x17] + 100.0) / 100.0);
 
 	if (x[0x18] & 0xe0) {
 		printf("    DPMS levels:");
@@ -1487,6 +1487,8 @@ void edid_state::parse_base_block(const unsigned char *x)
 		printf("    Default (sRGB) color space is primary color space\n");
 		if (memcmp(x + 0x19, srgb_chromaticity, sizeof(srgb_chromaticity)))
 			fail("sRGB is signaled, but the chromaticities do not match.\n");
+		if (x[0x17] != 120)
+			warn("sRGB is signaled, but the gamma != 2.2.\n");
 	} else if (!memcmp(x + 0x19, srgb_chromaticity, sizeof(srgb_chromaticity))) {
 		fail("The chromaticities match sRGB, but sRGB is not signaled.\n");
 	}
