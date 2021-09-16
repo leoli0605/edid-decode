@@ -243,7 +243,7 @@ void do_checksum(const char *prefix, const unsigned char *x, size_t len)
 	printf("\n");
 }
 
-static unsigned gcd(unsigned a, unsigned b)
+unsigned gcd(unsigned a, unsigned b)
 {
 	while (b) {
 		unsigned t = b;

@@ -118,6 +118,16 @@ enum gtf_ip_parm {
 
 typedef std::vector<timings_ext> vec_timings_ext;
 
+struct cta_vfd {
+	unsigned char rid;
+	unsigned char fr_factor;
+	unsigned int bfr50:1;
+	unsigned int fr24:1;
+	unsigned int bfr60:1;
+	unsigned int fr144:1;
+	unsigned int fr48:1;
+};
+
 struct edid_state {
 	edid_state()
 	{
@@ -162,6 +172,7 @@ struct edid_state {
 		cta.supported_hdmi_vic_codes = cta.supported_hdmi_vic_vsb_codes = 0;
 		memset(cta.vics, 0, sizeof(cta.vics));
 		memset(cta.preparsed_has_vic, 0, sizeof(cta.preparsed_has_vic));
+		memset(&cta.preparsed_first_vfd, 0, sizeof(cta.preparsed_first_vfd));
 		cta.preparsed_phys_addr = 0xffff;
 		cta.preparsed_speaker_count = 0;
 		cta.preparsed_sld = false;
@@ -250,6 +261,7 @@ struct edid_state {
 		vec_timings_ext vec_dtds;
 		unsigned preparsed_total_vtdbs;
 		vec_timings_ext vec_vtdbs;
+		cta_vfd preparsed_first_vfd;
 		vec_timings_ext preferred_timings;
 		bool preparsed_has_t8vtdb;
 		// Keep track of the found Tag/Extended Tag pairs.
@@ -335,6 +347,9 @@ struct edid_state {
 	void edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank = 0,
 			   unsigned rb_v_blank = 460, bool early_vsync_rqd = false);
 	void detailed_cvt_descriptor(const char *prefix, const unsigned char *x, bool first);
+	timings calc_ovt_mode(unsigned hact, unsigned vact,
+			      unsigned hratio, unsigned vratio,
+			      unsigned frame_rate);
 	void print_standard_timing(const char *prefix, unsigned char b1, unsigned char b2,
 				   bool gtf_only = false, bool show_both = false);
 	void detailed_display_range_limits(const unsigned char *x);
@@ -355,10 +370,12 @@ struct edid_state {
 	void hdmi_latency(unsigned char vid_lat, unsigned char aud_lat, bool is_ilaced);
 	void cta_vcdb(const unsigned char *x, unsigned length);
 	void cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420);
+	void cta_vfdb(const unsigned char *x, unsigned n);
 	void cta_y420cmdb(const unsigned char *x, unsigned length);
 	void cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim);
 	void cta_vfpdb(const unsigned char *x, unsigned length);
 	void cta_nvrdb(const unsigned char *x, unsigned length);
+	cta_vfd cta_parse_vfd(const unsigned char *x, unsigned lvfd);
 	void cta_rcdb(const unsigned char *x, unsigned length);
 	void cta_sldb(const unsigned char *x, unsigned length);
 	void cta_preparse_sldb(const unsigned char *x, unsigned length);
@@ -482,6 +499,7 @@ void hex_block(const char *prefix, const unsigned char *x, unsigned length,
 std::string block_name(unsigned char block);
 void calc_ratio(struct timings *t);
 const char *oui_name(unsigned oui, unsigned *ouinum = NULL);
+unsigned gcd(unsigned a, unsigned b);
 
 bool timings_close_match(const timings &t1, const timings &t2);
 const struct timings *find_dmt_id(unsigned char dmt_id);

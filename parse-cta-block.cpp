@@ -189,6 +189,53 @@ static const struct timings edid_cta_modes2[] = {
 	{  4096, 2160, 256, 135, 1188000, 0, false,   88,  88, 128, true,   8, 10,  72, true  },
 };
 
+struct edid_rid {
+	unsigned hact, vact;
+	unsigned hratio, vratio;
+};
+
+static const edid_rid rids[] = {
+	/* RID 0-9 */
+	{     0,    0,  0,  0 },
+	{  1280,  720, 16,  9 },
+	{  1280,  720, 64, 27 },
+	{  1680,  720, 64, 27 },
+	{  1920, 1080, 16,  9 },
+	{  1920, 1080, 64, 27 },
+	{  2560, 1080, 64, 27 },
+	{  3840, 1080, 32,  9 },
+	{  2560, 1440, 16,  9 },
+	{  3440, 1440, 64, 27 },
+	/* RID 10-19 */
+	{  5120, 1440, 32,  9 },
+	{  3840, 2160, 16,  9 },
+	{  3840, 2160, 64, 27 },
+	{  5120, 2160, 64, 27 },
+	{  7680, 2160, 32,  9 },
+	{  5120, 2880, 16,  9 },
+	{  5120, 2880, 64, 27 },
+	{  6880, 2880, 64, 27 },
+	{ 10240, 2880, 32,  9 },
+	{  7680, 4320, 16,  9 },
+	/* RID 20-28 */
+	{  7680, 4320, 64, 27 },
+	{ 10240, 4320, 64, 27 },
+	{ 15360, 4320, 32,  9 },
+	{ 11520, 6480, 16,  9 },
+	{ 11520, 6480, 64, 27 },
+	{ 15360, 6480, 64, 27 },
+	{ 15360, 8640, 16,  9 },
+	{ 15360, 8640, 64, 27 },
+	{ 20480, 8640, 64, 27 },
+};
+
+static const unsigned vf_rate_values[] = {
+	/* Rate Index 0-7 */
+	  0,  24,  25,  30,  48,  50,  60, 100,
+	/* Rate Index 8-15 */
+	120, 144, 200, 240, 300, 360, 400, 480,
+};
+
 static const unsigned char edid_hdmi_mode_map[] = { 95, 94, 93, 98 };
 
 unsigned char hdmi_vic_to_vic(unsigned char hdmi_vic)
@@ -500,6 +547,105 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 	}
 }
 
+cta_vfd edid_state::cta_parse_vfd(const unsigned char *x, unsigned lvfd)
+{
+	cta_vfd vfd = {};
+
+	vfd.rid = x[0] & 0x3f;
+	if (vfd.rid >= ARRAY_SIZE(rids)) {
+		vfd.rid = 0;
+		return vfd;
+	}
+	vfd.bfr50 = !!(x[0] & 0x80);
+	vfd.fr24 = !!(x[0] & 0x40);
+	vfd.bfr60 = lvfd > 1 ? !!(x[1] & 0x80) : 1;
+	vfd.fr144 = lvfd > 1 ? !!(x[1] & 0x40) : 0;
+	vfd.fr_factor = lvfd > 1 ? (x[1] & 0x3f) : 3;
+	vfd.fr48 = lvfd > 2 ? !!(x[2] & 0x01) : 0;
+	return vfd;
+}
+
+static bool vfd_has_rate(cta_vfd &vfd, unsigned rate_index)
+{
+	static const unsigned factors[6] = {
+		1, 2, 4, 8, 12, 16
+	};
+	unsigned rate = vf_rate_values[rate_index];
+	unsigned factor = 0;
+
+	if (!vfd.rid)
+		return false;
+	if (rate == 24)
+		return vfd.fr24;
+	if (rate == 48)
+		return vfd.fr48;
+	if (rate == 144)
+		return vfd.fr144;
+
+	if (!(rate % 30)) {
+		if (!vfd.bfr60)
+			return false;
+		factor = rate / 30;
+	}
+	if (!(rate % 25)) {
+		if (!vfd.bfr50)
+			return false;
+		factor = rate / 25;
+	}
+
+	for (unsigned i = 0; i < ARRAY_SIZE(factors); i++)
+		if (factors[i] == factor && (vfd.fr_factor & (1 << i)))
+			return true;
+	return false;
+}
+
+void edid_state::cta_vfdb(const unsigned char *x, unsigned n)
+{
+	if (n-- == 0) {
+		fail("Length is 0.\n");
+		return;
+	}
+	unsigned char flags = *x++;
+	unsigned lvfd = (flags & 3) + 1;
+
+	if (n % lvfd) {
+		fail("Length - 1 is not a multiple of Lvfd (%u).\n", lvfd);
+		return;
+	}
+	if (flags & 0x80)
+		printf("    Supports YCbCr 4:2:0\n");
+	if (flags & 0x40)
+		printf("    NTSC fractional frame rates are preferred\n");
+	for (unsigned i = 0; i < n; i += lvfd, x += lvfd)  {
+		unsigned char rid = x[0] & 0x3f;
+		cta_vfd vfd = cta_parse_vfd(x, lvfd);
+
+		if (lvfd > 2 && (x[2] & 0xfe))
+			fail("Bits F31-F37 must be 0.\n");
+		if (lvfd > 3 && x[3])
+			fail("Bits F40-F47 must be 0.\n");
+		if (rid == 0 || rid >= ARRAY_SIZE(rids)) {
+			fail("Unknown RID %u.\n", rid);
+			continue;
+		}
+		for (unsigned rate_index = 1; rate_index < ARRAY_SIZE(vf_rate_values); rate_index++) {
+			if (!vfd_has_rate(vfd, rate_index))
+				continue;
+			struct timings t = calc_ovt_mode(rids[vfd.rid].hact,
+							 rids[vfd.rid].vact,
+							 rids[vfd.rid].hratio,
+							 rids[vfd.rid].vratio,
+							 vf_rate_values[i]);
+			char type[16];
+			sprintf(type, "RID %u@%up", rid, vf_rate_values[rate_index]);
+			print_timings("    ", &t, type);
+			if (rid_to_vic(vfd.rid, i))
+				fail("%s not allowed since it maps to VIC %u.\n",
+				     rid_to_vic(vfd.rid, i));
+		}
+	}
+}
+
 void edid_state::print_vic_index(const char *prefix, unsigned idx, const char *suffix, bool ycbcr420)
 {
 	if (!suffix)
@@ -599,6 +745,16 @@ void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 		if (svr >= cta.preparsed_total_vtdbs + 145) {
 			printf("    %s: Invalid\n", suffix);
 			fail("Invalid VTDB %u.\n", svr - 144);
+		} else {
+			printf("    %s\n", suffix);
+			vec_tim.push_back(timings_ext(svr, suffix));
+		}
+	} else if (svr >= 161 && svr <= 175) {
+		sprintf(suffix, "RID %u@%up",
+			cta.preparsed_first_vfd.rid, vf_rate_values[svr - 160]);
+		if (!vfd_has_rate(cta.preparsed_first_vfd, svr - 160)) {
+			printf("    %s: Invalid\n", suffix);
+			fail("Invalid %s.\n", suffix);
 		} else {
 			printf("    %s\n", suffix);
 			vec_tim.push_back(timings_ext(svr, suffix));
@@ -2119,7 +2275,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x03: data_block = "Vendor-Specific Data Block"; break;
 	case 0x04: data_block = "Speaker Allocation Data Block"; audio_block = true; break;
 	case 0x05: data_block = "VESA Display Transfer Characteristics Data Block"; break;
-
+	case 0x06: data_block = "Video Format Data Block"; break;
 	case 0x07: data_block = "Unknown CTA-861 Data Block (extended tag truncated)"; break;
 
 	case 0x700: data_block = "Video Capability Data Block"; break;
@@ -2229,6 +2385,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x03|kOUI_Microsoft: if (length != 0x12) goto dodefault; cta_microsoft(x, length); break;
 	case 0x04: cta_sadb(x, length); break;
 	case 0x05: cta_vesa_dtcdb(x, length); break;
+	case 0x06: cta_vfdb(x, length); break;
 	case 0x07: fail("Extended tag cannot have zero length.\n"); break;
 	case 0x700: cta_vcdb(x, length); break;
 	case 0x701|kOUI_HDR10: cta_hdr10plus(x, length); break;
@@ -2316,6 +2473,11 @@ void edid_state::preparse_cta_block(const unsigned char *x)
 				cta.has_hdmi = true;
 				cta.preparsed_phys_addr = (x[i + 4] << 8) | x[i + 5];
 			}
+			break;
+		case 0x06:
+			if (!(x[i] & 0x1f) || cta.preparsed_first_vfd.rid)
+				break;
+			cta.preparsed_first_vfd = cta_parse_vfd(x + 2, (x[i + 1] & 3) + 1);
 			break;
 		case 0x07:
 			if (x[i + 1] == 0x0d)
@@ -2476,9 +2638,15 @@ void edid_state::cta_resolve_svr(vec_timings_ext::iterator iter)
 	} else if (iter->svr() <= 144) {
 		iter->flags = cta.vec_dtds[iter->svr() - 129].flags;
 		iter->t = cta.vec_dtds[iter->svr() - 129].t;
-	} else {
+	} else if (iter->svr() <= 160) {
 		iter->flags = cta.vec_vtdbs[iter->svr() - 145].flags;
 		iter->t = cta.vec_vtdbs[iter->svr() - 145].t;
+	} else if (iter->svr() <= 175) {
+		iter->flags.clear();
+		unsigned char rid = cta.preparsed_first_vfd.rid;
+		iter->t = calc_ovt_mode(rids[rid].hact, rids[rid].vact,
+					rids[rid].hratio, rids[rid].vratio,
+					vf_rate_values[iter->svr() - 160]);
 	}
 }
 
