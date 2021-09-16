@@ -628,6 +628,38 @@ void edid_state::cta_vfpdb(const unsigned char *x, unsigned length)
 		cta_print_svr(x[i], cta.preferred_timings);
 }
 
+void edid_state::cta_nvrdb(const unsigned char *x, unsigned length)
+{
+	if (length == 0) {
+		fail("Empty Data Block with length %u.\n", length);
+		return;
+	}
+
+	unsigned char flags = length == 1 ? 0 : x[1];
+
+	cta.native_timings.clear();
+	cta_print_svr(x[0], cta.native_timings);
+	if ((flags & 1) && length < 6) {
+		fail("Data Block too short for Image Size (length = %u).\n", length);
+		return;
+	}
+	if (flags & 0x7e)
+		fail("Bits F41-F46 must be 0.\n");
+	if (!(flags & 1))
+		return;
+
+	unsigned w = (x[3] << 8) | x[2];
+	unsigned h = (x[5] << 8) | x[4];
+
+	if (!w || !h)
+		fail("Image Size has a zero width and/or height.\n");
+
+	if (flags & 0x80)
+		printf("    Image Size: %ux%u mm\n", w, h);
+	else
+		printf("    Image Size: %.1fx%.1f mm\n", w / 10.0, h / 10.0);
+}
+
 static std::string hdmi_latency2s(unsigned char l, bool is_video)
 {
 	if (!l)
@@ -2087,6 +2119,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x705: data_block = "Colorimetry Data Block"; break;
 	case 0x706: data_block = "HDR Static Metadata Data Block"; break;
 	case 0x707: data_block = "HDR Dynamic Metadata Data Block"; break;
+	case 0x708: data_block = "Native Video Resolution Data Block"; break;
 
 	case 0x70d: data_block = "Video Format Preference Data Block"; break;
 	case 0x70e: data_block = "YCbCr 4:2:0 Video Data Block"; break;
@@ -2145,6 +2178,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x702:
 	case 0x705:
 	case 0x706:
+	case 0x708:
 	case 0x70d:
 	case 0x70f:
 	case 0x712:
@@ -2197,6 +2231,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x705: cta_colorimetry_block(x, length); break;
 	case 0x706: cta_hdr_static_metadata_block(x, length); break;
 	case 0x707: cta_hdr_dyn_metadata_block(x, length); break;
+	case 0x708: cta_nvrdb(x, length); return;
 	case 0x70d: cta_vfpdb(x, length); break;
 	case 0x70e: cta_svd(x, length, true); break;
 	case 0x70f: cta_y420cmdb(x, length); break;

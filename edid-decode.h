@@ -156,6 +156,7 @@ struct edid_state {
 			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = false;
 		cta.previous_cta_tag = 0xfff;
 		cta.have_hf_vsdb = cta.have_hf_scdb = false;
+		cta.image_width = cta.image_height = 0;
 		cta.block_number = 0;
 		cta.first_svd = true;
 		cta.supported_hdmi_vic_codes = cta.supported_hdmi_vic_vsb_codes = 0;
@@ -256,6 +257,8 @@ struct edid_state {
 		std::vector<unsigned> found_tags;
 		timings_ext t8vtdb;
 		vec_timings_ext native_timings;
+		// in 0.1 mm units
+		unsigned image_width, image_height;
 		bool has_vic_1;
 		bool first_svd_might_be_preferred;
 		unsigned char byte3;
@@ -355,6 +358,7 @@ struct edid_state {
 	void cta_y420cmdb(const unsigned char *x, unsigned length);
 	void cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim);
 	void cta_vfpdb(const unsigned char *x, unsigned length);
+	void cta_nvrdb(const unsigned char *x, unsigned length);
 	void cta_rcdb(const unsigned char *x, unsigned length);
 	void cta_sldb(const unsigned char *x, unsigned length);
 	void cta_preparse_sldb(const unsigned char *x, unsigned length);

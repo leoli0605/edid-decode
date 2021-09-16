@@ -2024,6 +2024,12 @@ void edid_state::check_displayid_blocks()
 		     dispid.version >= 0x20 ? "VII" : "I");
 	if (dispid.preferred_timings.empty())
 		fail("DisplayID expects at least one preferred timing.\n");
+	if (cta.image_width && dispid.image_width &&
+	    (cta.image_width != dispid.image_width ||
+	     cta.image_height != dispid.image_height))
+		fail("Image size mismatch: CTA-861: %.1fx%.1fmm DisplayID: %.1fx%.1fmm.\n",
+		     cta.image_width / 10.0, cta.image_height / 10.0,
+		     dispid.image_width / 10.0, dispid.image_height / 10.0);
 	if (dispid.image_width && dispid.image_width < 25600 && dispid.image_height < 25600 &&
 	    (abs((int)dispid.image_width - (int)base.max_display_width_mm * 10) >= 100 ||
 	     abs((int)dispid.image_height - (int)base.max_display_height_mm * 10) >= 100))
