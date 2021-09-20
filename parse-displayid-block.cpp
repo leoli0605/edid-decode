@@ -1368,6 +1368,48 @@ void edid_state::parse_displayid_ContainerID(const unsigned char *x)
 	}
 }
 
+// tag 0x2b
+
+void edid_state::parse_displayid_adaptive_sync(const unsigned char *x)
+{
+	check_displayid_datablock_revision(x[1], 0x70);
+
+	unsigned size = 6 + ((x[1] >> 4) & 0x7);
+	unsigned len = x[2];
+	unsigned descriptor = 1;
+
+	x += 3;
+	if (len % size)
+		fail("DisplayID payload length %u is not a multiple of %u.\n", len, size);
+	while (len >= size) {
+		printf("    Descriptor #%u:\n", descriptor++);
+
+		printf("      %sNative Panel Range\n", (x[0] & 1) ? "" : "Non-");
+		unsigned v = (x[0] >> 2) & 3;
+		switch (v) {
+		case 0: printf("      Fixed Average V-Total\n"); break;
+		case 1: printf("      Fixed Average V-Total and Adaptive V-Total\n"); break;
+		default:
+			printf("      Reserved %u\n", v);
+			fail("Use of reserved value %u.\n", v);
+			break;
+		}
+		if (x[0] & 0x10)
+			printf("      Supports Seamless Transition\n");
+		if (x[0] & 0x02)
+			printf("      'Max Single Frame Duration Increase' field value without jitter impact\n");
+		if (x[0] & 0x20)
+			printf("      'Max Single Frame Duration Decrease' field value without jitter impact\n");
+		printf("      Max Duration Increase: %.2f ms\n", x[1] / 4.0);
+		printf("      Max Duration Decrease: %.2f ms\n", x[5] / 4.0);
+		printf("      Min Refresh Rate: %u Hz\n", x[2]);
+		printf("      Max Refresh Rate: %u Hz\n", 1 + x[3] + (x[4] & 3) * 256);
+
+		len -= size;
+		x += size;
+	}
+}
+
 // tag 0x32
 
 void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
@@ -1687,6 +1729,7 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 		case 0x27: data_block = "Stereo Display Interface Data Block (" + utohex(tag) + ")"; break;
 		case 0x28: data_block = "Tiled Display Topology Data Block (" + utohex(tag) + ")"; break;
 		case 0x29: data_block = "ContainerID Data Block"; break;
+		case 0x2b: data_block = "Adaptive Sync Data Block"; break;
 		case 0x32: data_block = "Video Timing Modes Type 10 - Formula-based Timings Data Block"; break;
 		// 0x2a .. 0x7d RESERVED for Additional VESA-defined Data Blocks
 		case 0x7e: // DisplayID 2.0
@@ -1862,6 +1905,7 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 		case 0x27: parse_displayid_stereo_display_intf(x + offset); break;
 		case 0x28: parse_displayid_tiled_display_topology(x + offset, true); break;
 		case 0x29: parse_displayid_ContainerID(x + offset); break;
+		case 0x2b: parse_displayid_adaptive_sync(x + offset); break;
 		case 0x32: {
 			   unsigned sz = 6 + ((x[offset + 1] & 0x70) >> 4);
 
