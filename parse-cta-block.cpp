@@ -1140,6 +1140,24 @@ static void cta_hdr10plus(const unsigned char *x, unsigned length)
 		printf("\n");
 }
 
+// Convert a PQ value (0-1) to cd/m^2 aka nits (0-10000)
+static double pq2nits(double pq)
+{
+	const double m1 = 2610.0 / 16384.0;
+	const double m2 = 128.0 * (2523.0 / 4096.0);
+	const double c1 = 3424.0 / 4096.0;
+	const double c2 = 32.0 * (2413.0 / 4096.0);
+	const double c3 = 32.0 * (2392.0 / 4096.0);
+	double e = pow(pq, 1.0 / m2);
+	double v = e - c1;
+
+	if (v < 0)
+		v = 0;
+	v /= c2 - c3 * e;
+	v = pow(v, 1.0 / m1);
+	return v * 10000.0;
+}
+
 static void cta_dolby_video(const unsigned char *x, unsigned length)
 {
 	unsigned char version = (x[0] >> 5) & 0x07;
@@ -1155,8 +1173,10 @@ static void cta_dolby_video(const unsigned char *x, unsigned length)
 			printf("    Supports global dimming\n");
 		unsigned char dm_version = x[16];
 		printf("    DM Version: %u.%u\n", dm_version >> 4, dm_version & 0xf);
-		printf("    Target Min PQ: %u\n", (x[14] << 4) | (x[13] >> 4));
-		printf("    Target Max PQ: %u\n", (x[15] << 4) | (x[13] & 0xf));
+		unsigned pq = (x[14] << 4) | (x[13] >> 4);
+		printf("    Target Min PQ: %u (%.8f cd/m^2)\n", pq, pq2nits(pq / 4095.0));
+		pq = (x[15] << 4) | (x[13] & 0xf);
+		printf("    Target Max PQ: %u (%u cd/m^2)\n", pq, (unsigned)pq2nits(pq / 4095.0));
 		printf("    Rx, Ry: %.8f, %.8f\n",
 		       ((x[1] >> 4) | (x[2] << 4)) / 4096.0,
 		       ((x[1] & 0xf) | (x[3] << 4)) / 4096.0);
@@ -1181,9 +1201,9 @@ static void cta_dolby_video(const unsigned char *x, unsigned length)
 		printf("    DM Version: %u.x\n", dm_version + 2);
 		printf("    Colorimetry: %s\n", (x[2] & 0x01) ? "P3-D65" : "ITU-R BT.709");
 		printf("    Low Latency: %s\n", (x[3] & 0x01) ? "Standard + Low Latency" : "Only Standard");
-		printf("    Target Max Luminance: %u cd/m^2\n", 100 + (x[1] >> 1) * 50);
 		double lm = (x[2] >> 1) / 127.0;
 		printf("    Target Min Luminance: %.8f cd/m^2\n", lm * lm);
+		printf("    Target Max Luminance: %u cd/m^2\n", 100 + (x[1] >> 1) * 50);
 		if (length == 10) {
 			printf("    Rx, Ry: %.8f, %.8f\n", x[4] / 256.0, x[5] / 256.0);
 			printf("    Gx, Gy: %.8f, %.8f\n", x[6] / 256.0, x[7] / 256.0);
@@ -1235,8 +1255,24 @@ static void cta_dolby_video(const unsigned char *x, unsigned length)
 		case 2: printf("12 bit\n"); break;
 		case 3: printf("Reserved\n"); break;
 		}
-		printf("    Target Min PQ v2: %u\n", 20 * (x[1] >> 3));
-		printf("    Target Max PQ v2: %u\n", 2055 + 65 * (x[2] >> 3));
+
+		// This divider constant is a guess. According to what I read
+		// when googling for how to interpret these values, the Min PQ
+		// maps to a range of 0-1 cd/m^2, and the Max PQ maps to a
+		// range of 100-10000 cd/m^2. Since the maximum value for the Max PQ
+		// is 2055 + 65 * 31 = 4070, I am guessing that that is the correct
+		// divider, but it might well be 4095 or 4096 instead.
+		//
+		// I'm also not sure if the divider for Min PQ is the same as for
+		// Max PQ. To map the max value of 20 * 31 to 1 cd/m^2 you would
+		// need a divider of 4134 or 4135, but I suspect the same divider
+		// is used.
+		const double dv_pq_div = 2055 + 31 * 65;
+
+		unsigned pq = 20 * (x[1] >> 3);
+		printf("    Target Min PQ v2: %u (%.8f cd/m^2)\n", pq, pq2nits(pq / dv_pq_div));
+		pq = 2055 + 65 * (x[2] >> 3);
+		printf("    Target Max PQ v2: %u (%u cd/m^2)\n", pq, (unsigned)pq2nits(pq / dv_pq_div));
 
 		double xmin = 0.625;
 		double xstep = (0.74609375 - xmin) / 31.0;
