@@ -2030,6 +2030,7 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned length,
 			       bool duplicate)
 {
+	const char *block_name;
 	const char *name;
 	unsigned oui;
 	bool reverse = false;
@@ -2104,8 +2105,9 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 	switch (tag) {
 	case 0x700: cta_vcdb(x, length); break;
 	case 0x701:
+		block_name = "Vendor-Specific Video Data Block";
 		if (length < 3) {
-			data_block = std::string("Vendor-Specific Video Data Block");
+			data_block = std::string(block_name);
 			fail("Invalid length %u < 3.\n", length);
 			break;
 		}
@@ -2118,15 +2120,13 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 				reverse = true;
 		}
 		if (!name) {
-			printf("  Vendor-Specific Video Data Block, OUI %s:\n",
-			       ouitohex(oui).c_str());
+			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
 			hex_block("    ", x, length);
 			data_block.clear();
-			warn("Unknown Extended Vendor-Specific Video Data Block, OUI %s.\n",
-			     ouitohex(oui).c_str());
+			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
 			break;
 		}
-		data_block = std::string("Vendor-Specific Video Data Block (") + name + ")";
+		data_block = std::string(block_name) + " (" + name + ")";
 		if (reverse)
 			fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
 		printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
@@ -2145,8 +2145,9 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 	case 0x70e: cta_svd(x, length, true); break;
 	case 0x70f: cta_y420cmdb(x, length); break;
 	case 0x711:
+		block_name = "Vendor-Specific Audio Data Block";
 		if (length < 3) {
-			data_block = std::string("Vendor-Specific Audio Data Block");
+			data_block = std::string(block_name);
 			fail("Invalid length %u < 3.\n", length);
 			break;
 		}
@@ -2159,15 +2160,13 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 				reverse = true;
 		}
 		if (!name) {
-			printf("  Vendor-Specific Audio Data Block, OUI %s:\n",
-			       ouitohex(oui).c_str());
+			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
 			hex_block("    ", x, length);
 			data_block.clear();
-			warn("Unknown Extended Vendor-Specific Audio Data Block, OUI %s.\n",
-			     ouitohex(oui).c_str());
+			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
 			break;
 		}
-		data_block = std::string("Vendor-Specific Audio Data Block (") + name + ")";
+		data_block = std::string(block_name) + " (" + name + ")";
 		if (reverse)
 			fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
 		printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
@@ -2224,6 +2223,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		x++;
 	}
 
+	const char *block_name;
 	const char *name;
 	unsigned oui;
 	bool reverse = false;
@@ -2242,6 +2242,12 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		cta_svd(x, length, false);
 		break;
 	case 0x03:
+		block_name = "Vendor-Specific Data Block";
+		if (length < 3) {
+			data_block = std::string(block_name);
+			fail("Invalid length %u < 3.\n", length);
+			break;
+		}
 		oui = (x[2] << 16) + (x[1] << 8) + x[0];
 		x += 3; length -=3;
 		name = oui_name(oui);
@@ -2251,14 +2257,13 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 				reverse = true;
 		}
 		if (!name) {
-			printf("  Vendor-Specific Data Block, OUI %s:\n", ouitohex(oui).c_str());
+			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
 			hex_block("    ", x, length);
 			data_block.clear();
-			warn("Unknown Vendor-Specific Data Block, OUI %s.\n",
-			     ouitohex(oui).c_str());
-			return;
+			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
+			break;
 		}
-		data_block = std::string("Vendor-Specific Data Block (") + name + ")";
+		data_block = std::string(block_name) + " (" + name + ")";
 		if (reverse)
 			fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
 		printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
