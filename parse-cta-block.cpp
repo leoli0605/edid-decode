@@ -2078,6 +2078,9 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 		return;
 	}
 
+	if (data_block.length())
+		printf("  %s:\n", data_block.c_str());
+
 	switch (tag) {
 	case 0x700:
 	case 0x702:
@@ -2097,9 +2100,6 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 	// See Table 52 of CTA-861-G for a description of Byte 3
 	if (audio_block && !(cta.byte3 & 0x40))
 		fail("Audio information is present, but bit 6 of Byte 3 of the CTA-861 Extension header indicates no Basic Audio support.\n");
-
-	if (data_block.length())
-		printf("  %s:\n", data_block.c_str());
 
 	switch (tag) {
 	case 0x700: cta_vcdb(x, length); break;
@@ -2296,17 +2296,17 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x04:
 		data_block = "Speaker Allocation Data Block";
 		printf("  %s:\n", data_block.c_str());
-		cta_sadb(x, length);
-		audio_block = true;
 		if (duplicate)
 			fail("Only one instance of this Data Block is allowed.\n");
+		cta_sadb(x, length);
+		audio_block = true;
 		break;
 	case 0x05:
 		data_block = "VESA Display Transfer Characteristics Data Block";
 		printf("  %s:\n", data_block.c_str());
-		cta_vesa_dtcdb(x, length);
 		if (duplicate)
 			fail("Only one instance of this Data Block is allowed.\n");
+		cta_vesa_dtcdb(x, length);
 		break;
 	case 0x07:
 		data_block = "Unknown CTA-861 Data Block (extended tag truncated)";
