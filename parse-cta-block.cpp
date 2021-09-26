@@ -652,57 +652,57 @@ void edid_state::cta_hdmi_block(const unsigned char *x, unsigned length)
 {
 	unsigned len_vic, len_3d;
 
-	if (length < 4) {
+	if (length < 1) {
 		fail("Empty Data Block with length %u.\n", length);
 		return;
 	}
-	printf("    Source physical address: %x.%x.%x.%x\n", x[3] >> 4, x[3] & 0x0f,
-	       x[4] >> 4, x[4] & 0x0f);
+	printf("    Source physical address: %x.%x.%x.%x\n", x[0] >> 4, x[0] & 0x0f,
+	       x[1] >> 4, x[1] & 0x0f);
 
-	if (length < 6)
+	if (length < 3)
 		return;
 
-	if (x[5] & 0x80)
+	if (x[2] & 0x80)
 		printf("    Supports_AI\n");
-	if (x[5] & 0x40)
+	if (x[2] & 0x40)
 		printf("    DC_48bit\n");
-	if (x[5] & 0x20)
+	if (x[2] & 0x20)
 		printf("    DC_36bit\n");
-	if (x[5] & 0x10)
+	if (x[2] & 0x10)
 		printf("    DC_30bit\n");
-	if (x[5] & 0x08)
+	if (x[2] & 0x08)
 		printf("    DC_Y444\n");
 	/* two reserved bits */
-	if (x[5] & 0x01)
+	if (x[2] & 0x01)
 		printf("    DVI_Dual\n");
 
-	if (length < 7)
+	if (length < 4)
 		return;
 
-	printf("    Maximum TMDS clock: %u MHz\n", x[6] * 5);
-	if (x[6] * 5 > 340)
+	printf("    Maximum TMDS clock: %u MHz\n", x[3] * 5);
+	if (x[3] * 5 > 340)
 		fail("HDMI VSDB Max TMDS rate is > 340.\n");
 
-	if (length < 8)
+	if (length < 5)
 		return;
 
-	if (x[7] & 0x0f) {
+	if (x[4] & 0x0f) {
 		printf("    Supported Content Types:\n");
-		if (x[7] & 0x01)
+		if (x[4] & 0x01)
 			printf("      Graphics\n");
-		if (x[7] & 0x02)
+		if (x[4] & 0x02)
 			printf("      Photo\n");
-		if (x[7] & 0x04)
+		if (x[4] & 0x04)
 			printf("      Cinema\n");
-		if (x[7] & 0x08)
+		if (x[4] & 0x08)
 			printf("      Game\n");
 	}
 
-	unsigned b = 8;
-	if (x[7] & 0x80) {
+	unsigned b = 5;
+	if (x[4] & 0x80) {
 		hdmi_latency(x[b], x[b + 1], false);
 
-		if (x[7] & 0x40) {
+		if (x[4] & 0x40) {
 			if (x[b] == x[b + 2] &&
 			    x[b + 1] == x[b + 3])
 				warn("Progressive and Interlaced latency values are identical, no need for both.\n");
@@ -712,7 +712,7 @@ void edid_state::cta_hdmi_block(const unsigned char *x, unsigned length)
 		b += 2;
 	}
 
-	if (!(x[7] & 0x20))
+	if (!(x[4] & 0x20))
 		return;
 
 	bool mask = false;
@@ -2248,7 +2248,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 			fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
 		printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
 		if (oui == 0x000c03) {
-			cta_hdmi_block(x + 1, length);
+			cta_hdmi_block(x + 4, length - 3);
 			cta.last_block_was_hdmi_vsdb = 1;
 			cta.first_block = 0;
 			// The HDMI OUI is present, so this EDID represents an HDMI
