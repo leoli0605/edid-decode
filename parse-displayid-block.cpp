@@ -1656,6 +1656,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	unsigned i;
 	unsigned tag = x[0];
 		unsigned oui = 0;
+	unsigned len = (length < 3) ? 0 : x[2];
 
 		switch (tag) {
 		// DisplayID 1.3:
@@ -1732,18 +1733,17 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 
 		if (length < 3) {
 			// report a problem when the remaining bytes are not 0.
-		if (tag || x[1]) {
-				fail("Not enough bytes remain (%d) for a DisplayID data block or the DisplayID filler is non-0.\n", length);
+		if (tag || (length > 1 && x[1])) {
+			fail("Not enough bytes remain (%d) for a DisplayID data block and the DisplayID filler is non-0.\n", length);
 			}
-		return 0xff;
+		return length;
 		}
 
 	unsigned block_rev = x[1] & 0x07;
-	unsigned len = x[2];
 
 		if (length < len + 3) {
 			fail("The length of this DisplayID data block (%d) exceeds the number of bytes remaining (%d).\n", len + 3, length);
-		return 0xff;
+		return length;
 		}
 
 		if (!tag && !len) {
@@ -1751,7 +1751,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		if (!memchk(x, length)) {
 				fail("Non-0 filler bytes in the DisplayID block.\n");
 			}
-		return 0xff;
+		return length;
 		}
 
 		printf("  %s:\n", data_block.c_str());
@@ -1867,7 +1867,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x27: parse_displayid_stereo_display_intf(x); break;
 	case 0x28: parse_displayid_tiled_display_topology(x, true); break;
 	case 0x29: parse_displayid_ContainerID(x); break;
-	case 0x2b: parse_displayid_adaptive_sync(x + offset); break;
+	case 0x2b: parse_displayid_adaptive_sync(x); break;
 		case 0x32: {
 		   unsigned sz = 6 + ((x[1] & 0x70) >> 4);
 
@@ -1892,7 +1892,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 			     data_block.c_str());
 
 	dispid.block_number++;
-	return len;
+	return len + 3;
 }
 
 void edid_state::parse_displayid_block(const unsigned char *x)
@@ -1932,12 +1932,10 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 		length = 121;
 	}
 
-	unsigned offset = 5;
-	while (length > 0) {
-		unsigned len = displayid_block(version, x + offset, length);
-		if (len == 0xff) break;
-		length -= len + 3;
-		offset += len + 3;
+	unsigned len;
+	for (const unsigned char *y = x + 5; length > 0; y += len) {
+		len = displayid_block(version, y, length);
+		length -= len;
 	}
 
 	/*
