@@ -573,7 +573,6 @@ void edid_state::print_standard_timing(const char *prefix, unsigned char b1, uns
 		break;
 	}
 	vact = (double)hact * vratio / hratio;
-	vact = 8 * ((vact + 7) / 8);
 	refresh = (b2 & 0x3f) + 60;
 
 	formula.hact = hact;
@@ -605,6 +604,10 @@ void edid_state::print_standard_timing(const char *prefix, unsigned char b1, uns
 		min_vert_freq_hz = min(min_vert_freq_hz, refresh);
 		max_vert_freq_hz = max(max_vert_freq_hz, refresh);
 	}
+
+	// See Ref. D-8 in the EDID-1.4 spec
+	if (vact & 1)
+		warn("Standard Timing %ux%u has a dubious odd vertical resolution.\n", hact, vact);
 }
 
 void edid_state::detailed_display_range_limits(const unsigned char *x)
