@@ -2049,18 +2049,19 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 
 	unsigned oui;
 	bool audio_block = false;
+	data_block.clear();
 
 	switch (tag) {
 	case 0x01: data_block = "Audio Data Block"; audio_block = true; break;
 	case 0x02: data_block = "Video Data Block"; break;
-	case 0x03: data_block.clear(); break;
+	case 0x03: data_block_o("Vendor-Specific Data Block"); break;
 	case 0x04: data_block = "Speaker Allocation Data Block"; audio_block = true; break;
 	case 0x05: data_block = "VESA Display Transfer Characteristics Data Block"; break;
 
 	case 0x07: data_block = "Unknown CTA-861 Data Block (extended tag truncated)"; break;
 
 	case 0x700: data_block = "Video Capability Data Block"; break;
-	case 0x701: data_block.clear(); break;
+	case 0x701: data_block_o("Vendor-Specific Video Data Block"); break;
 	case 0x702: data_block = "VESA Video Display Device Data Block"; break;
 	case 0x703: data_block = "VESA Video Timing Block Extension"; break;
 	case 0x704: data_block = "Reserved for HDMI Video Data Block"; break;
@@ -2072,7 +2073,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x70e: data_block = "YCbCr 4:2:0 Video Data Block"; break;
 	case 0x70f: data_block = "YCbCr 4:2:0 Capability Map Data Block"; break;
 	case 0x710: data_block = "Reserved for CTA-861 Miscellaneous Audio Fields"; break;
-	case 0x711: data_block.clear(); audio_block = true; break;
+	case 0x711: data_block_o("Vendor-Specific Audio Data Block"); audio_block = true; break;
 	case 0x712: data_block = "HDMI Audio Data Block"; audio_block = true; break;
 	case 0x713: data_block = "Room Configuration Data Block"; audio_block = true; break;
 	case 0x714: data_block = "Speaker Location Data Block"; audio_block = true; break;
@@ -2087,7 +2088,6 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x779: data_block = "HDMI Forum Sink Capability Data Block"; break;
 
 	default:
-		data_block.clear();
 		std::string unknown_name;
 		     if (tag < 0x700) unknown_name = "Unknown CTA-861 Data Block";
 		else if (tag < 0x70d) unknown_name = "Unknown CTA-861 Video-Related Data Block";
@@ -2129,7 +2129,6 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x01: cta_audio_block(x, length); break;
 	case 0x02: cta_svd(x, length, false); break;
 	case 0x03:
-		data_block_o("Vendor-Specific Data Block");
 		if (oui == 0x000c03) {
 			cta_hdmi_block(x, length);
 			cta.last_block_was_hdmi_vsdb = 1;
@@ -2166,7 +2165,6 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x07: fail("Extended tag cannot have zero length.\n"); break;
 	case 0x700: cta_vcdb(x, length); break;
 	case 0x701:
-		data_block_o("Vendor-Specific Video Data Block");
 		if (oui == 0x90848b)
 			cta_hdr10plus(x, length);
 		else if (oui == 0x00d046)
@@ -2182,7 +2180,6 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x70e: cta_svd(x, length, true); break;
 	case 0x70f: cta_y420cmdb(x, length); break;
 	case 0x711:
-		data_block_o("Vendor-Specific Audio Data Block");
 		if (oui == 0x00d046)
 			cta_dolby_audio(x, length);
 		else
