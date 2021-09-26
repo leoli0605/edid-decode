@@ -81,12 +81,6 @@ void edid_state::parse_displayid_product_id(const unsigned char *x)
 	check_displayid_datablock_revision(x[1]);
 
 	dispid.has_product_identification = true;
-	if (dispid.version >= 0x20) {
-		unsigned oui = (x[3] << 16) | (x[4] << 8) | x[5];
-		printf("    Vendor OUI %s\n", ouitohex(oui).c_str());
-	} else {
-		printf("    Vendor ID: %c%c%c\n", x[3], x[4], x[5]);
-	}
 	printf("    Product Code: %u\n", x[6] | (x[7] << 8));
 	unsigned sn = x[8] | (x[9] << 8) | (x[10] << 16) | (x[11] << 24);
 	if (sn) {
