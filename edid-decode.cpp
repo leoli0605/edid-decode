@@ -700,9 +700,6 @@ void hex_block(const char *prefix, const unsigned char *x,
 {
 	unsigned i, j;
 
-	if (!length)
-		return;
-
 	for (i = 0; i < length; i += step) {
 		unsigned len = min(step, length - i);
 
