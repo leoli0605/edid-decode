@@ -2132,7 +2132,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		if (oui == 0x000c03) {
 			cta_hdmi_block(x, length);
 			cta.last_block_was_hdmi_vsdb = 1;
-			cta.first_block = 0;
+			cta.block_number++;
 			// The HDMI OUI is present, so this EDID represents an HDMI
 			// interface. And HDMI interfaces must use EDID version 1.3
 			// according to the HDMI Specification, so check for this.
@@ -2195,7 +2195,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x778:
 		cta_hf_eeodb(x, length);
 		// This must be the first CTA-861 block
-		if (!cta.first_block)
+		if (cta.block_number > 0)
 			fail("Block starts at a wrong offset.\n");
 		break;
 	case 0x779:
@@ -2218,7 +2218,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		break;
 	}
 
-	cta.first_block = 0;
+	cta.block_number++;
 	cta.last_block_was_hdmi_vsdb = 0;
 }
 
@@ -2335,11 +2335,11 @@ void edid_state::parse_cta_block(const unsigned char *x)
 //				msg(!cta.has_hdmi, "If YCbCr support is indicated, then both 4:2:2 and 4:4:4 %s be supported.\n",
 //				    cta.has_hdmi ? "shall" : "should");
 			printf("  Native detailed modes: %u\n", x[3] & 0x0f);
-			if (cta.first_block)
+			if (cta.block_number == 0)
 				cta.byte3 = x[3];
 			else if (x[3] != cta.byte3)
 				fail("Byte 3 must be the same for all CTA-861 Extension Blocks.\n");
-			if (cta.first_block) {
+			if (cta.block_number == 0) {
 				unsigned native_dtds = x[3] & 0x0f;
 
 				cta.native_timings.clear();

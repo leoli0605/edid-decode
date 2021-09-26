@@ -154,7 +154,8 @@ struct edid_state {
 		cta.has_vic_1 = cta.first_svd_might_be_preferred = cta.has_sldb =
 			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = false;
 		cta.last_block_was_hdmi_vsdb = cta.have_hf_vsdb = cta.have_hf_scdb = false;
-		cta.first_block = cta.first_svd = true;
+		cta.block_number = 0;
+		cta.first_svd = true;
 		cta.supported_hdmi_vic_codes = cta.supported_hdmi_vic_vsb_codes = 0;
 		memset(cta.vics, 0, sizeof(cta.vics));
 		memset(cta.preparsed_has_vic, 0, sizeof(cta.preparsed_has_vic));
@@ -259,7 +260,7 @@ struct edid_state {
 		unsigned short preparsed_phys_addr;
 		bool last_block_was_hdmi_vsdb;
 		bool have_hf_vsdb, have_hf_scdb;
-		bool first_block;
+		unsigned block_number;
 		bool first_svd;
 		unsigned supported_hdmi_vic_codes;
 		unsigned supported_hdmi_vic_vsb_codes;
