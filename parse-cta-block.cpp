@@ -1133,11 +1133,12 @@ static void cta_microsoft(const unsigned char *x, unsigned length)
 
 static void cta_hdr10plus(const unsigned char *x, unsigned length)
 {
-	printf("    Application Version: %u", x[0]);
-	if (length > 1)
-		hex_block("  ", x + 1, length - 1);
-	else
-		printf("\n");
+	if (length == 0) {
+		fail("Empty Data Block with length %u.\n", length);
+		return;
+	}
+	printf("    Application Version: %u\n", x[0]);
+	hex_block("    ", x + 1, length - 1);
 }
 
 // Convert a PQ value (0-1) to cd/m^2 aka nits (0-10000)
