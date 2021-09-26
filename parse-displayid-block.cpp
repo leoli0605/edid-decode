@@ -1697,8 +1697,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		// 0x2a .. 0x7d RESERVED for Additional VESA-defined Data Blocks
 		case 0x7e: // DisplayID 2.0
 		case 0x7f: // DisplayID 1.3
-			if ((tag == 0x7e && version >= 0x20) ||
-			    (tag == 0x7f && version < 0x20)) {
+		{
 			oui = (x[3] << 16) + (x[4] << 8) + x[5];
 				const char *name = oui_name(oui);
 				bool reversed = false;
@@ -1709,17 +1708,15 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 						reversed = true;
 				}
 				if (name)
-					data_block = std::string("Vendor-Specific Data Block (") + name + ")";
+				data_block = "Vendor-Specific Data Block (" + utohex(tag) + ") (" + name + ")";
 				else
-					data_block = "Vendor-Specific Data Block, OUI " + ouitohex(oui);
+				data_block = "Vendor-Specific Data Block (" + utohex(tag) + "), OUI " + ouitohex(oui);
 				if (reversed)
 					fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order.\n").c_str());
-			} else {
-				data_block = "Unknown DisplayID Data Block (" + utohex(tag) + ")";
 			}
 			break;
 		// 0x80 RESERVED
-		case 0x81: data_block = "CTA-861 DisplayID Data Block (" + utohex(tag) + ")"; break;
+	case 0x81: data_block = "CTA-861 DisplayID Data Block"; break;
 		// 0x82 .. 0xff RESERVED
 		default:   data_block = "Unknown DisplayID Data Block (" + utohex(tag) + ")"; break;
 		}
