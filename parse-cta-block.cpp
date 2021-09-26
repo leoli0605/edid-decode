@@ -2057,7 +2057,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x04: data_block = "Speaker Allocation Data Block"; audio_block = true; break;
 	case 0x05: data_block = "VESA Display Transfer Characteristics Data Block"; break;
 
-	case 0x07: data_block.clear(); break;
+	case 0x07: data_block = "Unknown CTA-861 Data Block (extended tag truncated)"; break;
 
 	case 0x700: data_block = "Video Capability Data Block"; break;
 	case 0x701: data_block.clear(); break;
@@ -2088,22 +2088,16 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 
 	default:
 		data_block.clear();
-		if (tag < 0x700) {
-			printf("  Unknown CTA-861 tag 0x%02x\n", tag);
-			warn("Unknown CTA-861 Data Block %u.\n", tag);
-		}
-		else {
-			if (tag < 0x70d)
-				printf("  Unknown CTA-861 Video-Related");
-			else if (tag < 0x720)
-				printf("  Unknown CTA-861 Audio-Related");
-			else if (tag >= 0x778 && tag <= 0x77f)
-				printf("  Unknown CTA-861 HDMI-Related");
-			else
-				printf("  Unknown CTA-861");
-			printf(" Data Block (extended tag 0x%02x)\n", tag & 0xff);
-			warn("Unknown Extended CTA-861 Data Block 0x%02x.\n", tag & 0xff);
-		}
+		std::string unknown_name;
+		     if (tag < 0x700) unknown_name = "Unknown CTA-861 Data Block";
+		else if (tag < 0x70d) unknown_name = "Unknown CTA-861 Video-Related Data Block";
+		else if (tag < 0x720) unknown_name = "Unknown CTA-861 Audio-Related Data Block";
+		else if (tag < 0x778) unknown_name = "Unknown CTA-861 Data Block";
+		else if (tag < 0x780) unknown_name = "Unknown CTA-861 HDMI-Related Data Block";
+		else                  unknown_name = "Unknown CTA-861 Data Block";
+		unknown_name += std::string(" (") + (extended ? "extended " : "") + "tag " + utohex(tag & 0xff) + ")";
+		printf("  %s:\n", unknown_name.c_str());
+		warn("%s.\n", unknown_name.c_str());
 	}
 
 	if (data_block.length())
@@ -2169,10 +2163,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		break;
 	case 0x04: cta_sadb(x, length); break;
 	case 0x05: cta_vesa_dtcdb(x, length); break;
-	case 0x07:
-		printf("  Unknown CTA-861 Data Block (extended tag truncated):\n");
-		fail("Extended tag cannot have zero length.\n");
-		break;
+	case 0x07: fail("Extended tag cannot have zero length.\n"); break;
 	case 0x700: cta_vcdb(x, length); break;
 	case 0x701:
 		data_block_o("Vendor-Specific Video Data Block");
