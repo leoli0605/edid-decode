@@ -2068,6 +2068,7 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 	case 0x778: data_block = "HDMI Forum EDID Extension Override Data Block"; break;
 	case 0x779: data_block = "HDMI Forum Sink Capability Data Block"; break;
 	default:
+		data_block.clear();
 		if (tag < 0x70d)
 			printf("  Unknown CTA-861 Video-Related");
 		else if (tag < 0x720)
@@ -2077,10 +2078,7 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 		else
 			printf("  Unknown CTA-861");
 		printf(" Data Block (extended tag 0x%02x)\n", tag & 0xff);
-		hex_block("    ", x, length);
-		data_block.clear();
 		warn("Unknown Extended CTA-861 Data Block 0x%02x.\n", tag & 0xff);
-		return;
 	}
 
 	if (data_block.length())
@@ -2163,7 +2161,6 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 		hex_block("    ", x, length);
 		break;
 	}
-
 }
 
 void edid_state::cta_block(const unsigned char *x, bool duplicate)
@@ -2183,17 +2180,37 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	bool audio_block = false;
 
 	switch (tag) {
-	case 0x01:
-		data_block = "Audio Data Block";
+	case 0x01: data_block = "Audio Data Block"; audio_block = true; break;
+	case 0x02: data_block = "Video Data Block"; break;
+	case 0x03: data_block.clear(); break;
+	case 0x04: data_block = "Speaker Allocation Data Block"; audio_block = true; break;
+	case 0x05: data_block = "VESA Display Transfer Characteristics Data Block"; break;
+
+	case 0x07: data_block.clear(); break;
+	default:
+		data_block.clear();
+		if (extended) break;
+		printf("  Unknown CTA-861 tag 0x%02x\n", tag);
+		warn("Unknown CTA-861 Data Block %u.\n", tag);
+	}
+
+	if (data_block.length())
 		printf("  %s:\n", data_block.c_str());
-		cta_audio_block(x, length);
-		audio_block = true;
-		break;
-	case 0x02:
-		data_block = "Video Data Block";
-		printf("  %s:\n", data_block.c_str());
-		cta_svd(x, length, false);
-		break;
+
+	switch (tag) {
+	case 0x04:
+	case 0x05:
+		if (duplicate)
+			fail("Only one instance of this Data Block is allowed.\n");
+	}
+
+	// See Table 52 of CTA-861-G for a description of Byte 3
+	if (audio_block && !(cta.byte3 & 0x40))
+		fail("Audio information is present, but bit 6 of Byte 3 of the CTA-861 Extension header indicates no Basic Audio support.\n");
+
+	switch (tag) {
+	case 0x01: cta_audio_block(x, length); break;
+	case 0x02: cta_svd(x, length, false); break;
 	case 0x03:
 		data_block_o("Vendor-Specific Data Block");
 		if (oui == 0x000c03) {
@@ -2227,42 +2244,19 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		}
 		hex_block("    ", x, length);
 		break;
-	case 0x04:
-		data_block = "Speaker Allocation Data Block";
-		printf("  %s:\n", data_block.c_str());
-		if (duplicate)
-			fail("Only one instance of this Data Block is allowed.\n");
-		cta_sadb(x, length);
-		audio_block = true;
-		break;
-	case 0x05:
-		data_block = "VESA Display Transfer Characteristics Data Block";
-		printf("  %s:\n", data_block.c_str());
-		if (duplicate)
-			fail("Only one instance of this Data Block is allowed.\n");
-		cta_vesa_dtcdb(x, length);
-		break;
+	case 0x04: cta_sadb(x, length); break;
+	case 0x05: cta_vesa_dtcdb(x, length); break;
 	case 0x07:
-		data_block = "Unknown CTA-861 Data Block (extended tag truncated)";
-		printf("  %s:\n", data_block.c_str());
+		printf("  Unknown CTA-861 Data Block (extended tag truncated):\n");
 		fail("Extended tag cannot have zero length.\n");
 		break;
-	default: {
-		if (extended) {
+	default:
+		if (extended)
 			cta_ext_block(tag, x, length, duplicate);
-			break;
-		}
-		printf("  Unknown CTA-861 tag 0x%02x\n", tag);
-		hex_block("    ", x, length);
-		data_block.clear();
-		warn("Unknown CTA-861 Data Block %u.\n", tag);
-		break;
-	}
+		else
+			hex_block("    ", x, length);
 	}
 
-	// See Table 52 of CTA-861-G for a description of Byte 3
-	if (audio_block && !(cta.byte3 & 0x40))
-		fail("Audio information is present, but bit 6 of Byte 3 of the CTA-861 Extension header indicates no Basic Audio support.\n");
 	cta.first_block = 0;
 	cta.last_block_was_hdmi_vsdb = 0;
 }
