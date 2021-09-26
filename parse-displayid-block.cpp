@@ -1745,8 +1745,11 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 
 		if (!tag && !len) {
 			// A Product Identification Data Block with no payload bytes is not valid - assume this is the end.
+		data_block.clear(); // Probably not a Product Identification Data Block so clear this.
 		if (!memchk(x, length)) {
+			printf("  Filler:\n");
 				fail("Non-0 filler bytes in the DisplayID block.\n");
+			hex_block("    ", x, length);
 			}
 		return length;
 		}
