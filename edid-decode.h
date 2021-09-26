@@ -344,7 +344,7 @@ struct edid_state {
 	void cta_displayid_type_7(const unsigned char *x, unsigned length);
 	void cta_displayid_type_8(const unsigned char *x, unsigned length);
 	void cta_displayid_type_10(const unsigned char *x, unsigned length);
-	void cta_ext_block(const unsigned char *x, unsigned length, bool duplicate);
+	void cta_ext_block(unsigned tag, const unsigned char *x, unsigned length, bool duplicate);
 	void cta_block(const unsigned char *x, bool duplicate);
 	void preparse_cta_block(const unsigned char *x);
 	void parse_cta_block(const unsigned char *x);
