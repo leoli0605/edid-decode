@@ -331,6 +331,8 @@ struct edid_state {
 	void list_dmts();
 	void list_established_timings();
 
+	void data_block_oui(const char *block_name, const unsigned char *x, unsigned length, unsigned *ouinum);
+
 	void print_vic_index(const char *prefix, unsigned idx, const char *suffix, bool ycbcr420 = false);
 	void hdmi_latency(unsigned char vid_lat, unsigned char aud_lat, bool is_ilaced);
 	void cta_vcdb(const unsigned char *x, unsigned length);

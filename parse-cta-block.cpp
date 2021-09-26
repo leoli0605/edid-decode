@@ -2027,13 +2027,17 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 	}
 }
 
+#define data_block_o(n) \
+	do { \
+		data_block_oui(n, x, length, &oui); \
+		x += (length < 3) ? length : 3; \
+		length -= (length < 3) ? length : 3; \
+	} while(0)
+
 void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned length,
 			       bool duplicate)
 {
-	const char *block_name;
-	const char *name;
 	unsigned oui;
-	bool reverse = false;
 	bool audio_block = false;
 
 	switch (tag) {
@@ -2105,31 +2109,7 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 	switch (tag) {
 	case 0x700: cta_vcdb(x, length); break;
 	case 0x701:
-		block_name = "Vendor-Specific Video Data Block";
-		if (length < 3) {
-			data_block = std::string(block_name);
-			fail("Invalid length %u < 3.\n", length);
-			break;
-		}
-		oui = (x[2] << 16) + (x[1] << 8) + x[0];
-		x += 3; length -=3;
-		name = oui_name(oui);
-		if (!name) {
-			name = oui_name(oui, true);
-			if (name)
-				reverse = true;
-		}
-		if (!name) {
-			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
-			hex_block("    ", x, length);
-			data_block.clear();
-			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
-			break;
-		}
-		data_block = std::string(block_name) + " (" + name + ")";
-		if (reverse)
-			fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
-		printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
+		data_block_o("Vendor-Specific Video Data Block");
 		if (oui == 0x90848b)
 			cta_hdr10plus(x, length);
 		else if (oui == 0x00d046)
@@ -2145,31 +2125,7 @@ void edid_state::cta_ext_block(unsigned tag, const unsigned char *x, unsigned le
 	case 0x70e: cta_svd(x, length, true); break;
 	case 0x70f: cta_y420cmdb(x, length); break;
 	case 0x711:
-		block_name = "Vendor-Specific Audio Data Block";
-		if (length < 3) {
-			data_block = std::string(block_name);
-			fail("Invalid length %u < 3.\n", length);
-			break;
-		}
-		oui = (x[2] << 16) + (x[1] << 8) + x[0];
-		x += 3; length -=3;
-		name = oui_name(oui);
-		if (!name) {
-			name = oui_name(oui, true);
-			if (name)
-				reverse = true;
-		}
-		if (!name) {
-			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
-			hex_block("    ", x, length);
-			data_block.clear();
-			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
-			break;
-		}
-		data_block = std::string(block_name) + " (" + name + ")";
-		if (reverse)
-			fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
-		printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
+		data_block_o("Vendor-Specific Audio Data Block");
 		if (oui == 0x00d046)
 			cta_dolby_audio(x, length);
 		else
@@ -2223,10 +2179,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		x++;
 	}
 
-	const char *block_name;
-	const char *name;
 	unsigned oui;
-	bool reverse = false;
 	bool audio_block = false;
 
 	switch (tag) {
@@ -2242,31 +2195,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		cta_svd(x, length, false);
 		break;
 	case 0x03:
-		block_name = "Vendor-Specific Data Block";
-		if (length < 3) {
-			data_block = std::string(block_name);
-			fail("Invalid length %u < 3.\n", length);
-			break;
-		}
-		oui = (x[2] << 16) + (x[1] << 8) + x[0];
-		x += 3; length -=3;
-		name = oui_name(oui);
-		if (!name) {
-			name = oui_name(oui, true);
-			if (name)
-				reverse = true;
-		}
-		if (!name) {
-			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
-			hex_block("    ", x, length);
-			data_block.clear();
-			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
-			break;
-		}
-		data_block = std::string(block_name) + " (" + name + ")";
-		if (reverse)
-			fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
-		printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
+		data_block_o("Vendor-Specific Data Block");
 		if (oui == 0x000c03) {
 			cta_hdmi_block(x, length);
 			cta.last_block_was_hdmi_vsdb = 1;

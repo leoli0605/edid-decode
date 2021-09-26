@@ -679,6 +679,40 @@ const char *oui_name(unsigned oui, bool reverse)
 	}
 }
 
+void edid_state::data_block_oui(const char *block_name, const unsigned char *x, unsigned length, unsigned *ouinum)
+{
+	const char *name;
+	unsigned oui = 0;
+	bool reverse = false;
+
+	if (length < 3) {
+		data_block = std::string(block_name);
+		fail("Invalid length %u < 3.\n", length);
+	}
+	else {
+		oui = (x[2] << 16) + (x[1] << 8) + x[0];
+		x += 3; length -=3;
+		name = oui_name(oui);
+		if (!name) {
+			name = oui_name(oui, true);
+			if (name)
+				reverse = true;
+		}
+		if (!name) {
+			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
+			data_block.clear();
+			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
+		}
+		else {
+			data_block = std::string(block_name) + " (" + name + ")";
+			if (reverse)
+				fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
+			printf("  %s, OUI %s:\n", data_block.c_str(), ouitohex(oui).c_str());
+		}
+	}
+	if (ouinum) *ouinum = oui;
+}
+
 std::string ouitohex(unsigned oui)
 {
 	char buf[32];
