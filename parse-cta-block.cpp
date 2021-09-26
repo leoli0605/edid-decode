@@ -2102,12 +2102,12 @@ void edid_state::cta_ext_block(const unsigned char *x, unsigned length,
 		printf("  %s:\n", data_block.c_str());
 
 	switch (x[0]) {
-	case 0x00: cta_vcdb(x + 1, length); return;
+	case 0x00: cta_vcdb(x + 1, length); break;
 	case 0x01:
 		if (length < 3) {
 			data_block = std::string("Vendor-Specific Video Data Block");
 			fail("Invalid length %u < 3.\n", length);
-			return;
+			break;
 		}
 		oui = (x[3] << 16) + (x[2] << 8) + x[1];
 		name = oui_name(oui);
@@ -2123,7 +2123,7 @@ void edid_state::cta_ext_block(const unsigned char *x, unsigned length,
 			data_block.clear();
 			warn("Unknown Extended Vendor-Specific Video Data Block, OUI %s.\n",
 			     ouitohex(oui).c_str());
-			return;
+			break;
 		}
 		data_block = std::string("Vendor-Specific Video Data Block (") + name + ")";
 		if (reverse)
@@ -2135,19 +2135,19 @@ void edid_state::cta_ext_block(const unsigned char *x, unsigned length,
 			cta_dolby_video(x + 4, length - 3);
 		else
 			hex_block("    ", x + 4, length - 3);
-		return;
-	case 0x02: cta_vesa_vdddb(x + 1, length); return;
-	case 0x05: cta_colorimetry_block(x + 1, length); return;
-	case 0x06: cta_hdr_static_metadata_block(x + 1, length); return;
-	case 0x07: cta_hdr_dyn_metadata_block(x + 1, length); return;
-	case 0x0d: cta_vfpdb(x + 1, length); return;
-	case 0x0e: cta_svd(x + 1, length, true); return;
-	case 0x0f: cta_y420cmdb(x + 1, length); return;
+		break;
+	case 0x02: cta_vesa_vdddb(x + 1, length); break;
+	case 0x05: cta_colorimetry_block(x + 1, length); break;
+	case 0x06: cta_hdr_static_metadata_block(x + 1, length); break;
+	case 0x07: cta_hdr_dyn_metadata_block(x + 1, length); break;
+	case 0x0d: cta_vfpdb(x + 1, length); break;
+	case 0x0e: cta_svd(x + 1, length, true); break;
+	case 0x0f: cta_y420cmdb(x + 1, length); break;
 	case 0x11:
 		if (length < 3) {
 			data_block = std::string("Vendor-Specific Audio Data Block");
 			fail("Invalid length %u < 3.\n", length);
-			return;
+			break;
 		}
 		oui = (x[3] << 16) + (x[2] << 8) + x[1];
 		name = oui_name(oui);
@@ -2163,7 +2163,7 @@ void edid_state::cta_ext_block(const unsigned char *x, unsigned length,
 			data_block.clear();
 			warn("Unknown Extended Vendor-Specific Audio Data Block, OUI %s.\n",
 			     ouitohex(oui).c_str());
-			return;
+			break;
 		}
 		data_block = std::string("Vendor-Specific Audio Data Block (") + name + ")";
 		if (reverse)
@@ -2173,20 +2173,20 @@ void edid_state::cta_ext_block(const unsigned char *x, unsigned length,
 			cta_dolby_audio(x + 4, length - 3);
 		else
 			hex_block("    ", x + 4, length - 3);
-		return;
-	case 0x12: cta_hdmi_audio_block(x + 1, length); return;
-	case 0x13: cta_rcdb(x + 1, length); return;
-	case 0x14: cta_sldb(x + 1, length); return;
-	case 0x20: cta_ifdb(x + 1, length); return;
-	case 0x34: cta_displayid_type_7(x + 1, length); return;
-	case 0x35: cta_displayid_type_8(x + 1, length); return;
-	case 0x42: cta_displayid_type_10(x + 1, length); return;
+		break;
+	case 0x12: cta_hdmi_audio_block(x + 1, length); break;
+	case 0x13: cta_rcdb(x + 1, length); break;
+	case 0x14: cta_sldb(x + 1, length); break;
+	case 0x20: cta_ifdb(x + 1, length); break;
+	case 0x34: cta_displayid_type_7(x + 1, length); break;
+	case 0x35: cta_displayid_type_8(x + 1, length); break;
+	case 0x42: cta_displayid_type_10(x + 1, length); break;
 	case 0x78:
 		cta_hf_eeodb(x + 1, length);
 		// This must be the first CTA-861 block
 		if (!cta.first_block)
 			fail("Block starts at a wrong offset.\n");
-		return;
+		break;
 	case 0x79:
 		if (!cta.last_block_was_hdmi_vsdb)
 			fail("HDMI Forum SCDB did not immediately follow the HDMI VSDB.\n");
@@ -2195,16 +2195,18 @@ void edid_state::cta_ext_block(const unsigned char *x, unsigned length,
 		if (length < 2) {
 			data_block = std::string("HDMI Forum SCDB");
 			fail("Invalid length %u < 2.\n", length);
-			return;
+			break;
 		}
 		if (x[1] || x[2])
 			printf("  Non-zero SCDB reserved fields!\n");
 		cta_hf_scdb(x + 3, length - 2);
 		cta.have_hf_scdb = 1;
-		return;
+		break;
+	default:
+		hex_block("    ", x + 1, length);
+		break;
 	}
 
-	hex_block("    ", x + 1, length);
 }
 
 void edid_state::cta_block(const unsigned char *x, bool duplicate)
