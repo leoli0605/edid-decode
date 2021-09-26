@@ -1721,25 +1721,22 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		default:   data_block = "Unknown DisplayID Data Block (" + utohex(tag) + ")"; break;
 		}
 
-		if (version >= 0x20 && (tag < 0x20 || tag == 0x7f))
-			fail("Use of DisplayID v1.x tag for DisplayID v%u.%u.\n",
-			     version >> 4, version & 0xf);
-		if (version < 0x20 && tag >= 0x20 && tag <= 0x7e)
-			fail("Use of DisplayID v2.0 tag for DisplayID v%u.%u.\n",
-			     version >> 4, version & 0xf);
-
 		if (length < 3) {
-			// report a problem when the remaining bytes are not 0.
+		// Report a problem when the remaining bytes are not 0.
+		data_block.clear(); // Probably not a Data Block so clear this.
 		if (tag || (length > 1 && x[1])) {
+			printf("  Filler:\n");
 			fail("Not enough bytes remain (%d) for a DisplayID data block and the DisplayID filler is non-0.\n", length);
+			hex_block("    ", x, length);
 			}
 		return length;
 		}
 
-	unsigned block_rev = x[1] & 0x07;
-
 		if (length < len + 3) {
+		data_block.clear(); // Probably not a Data Block so clear this.
+		printf("  Filler:\n");
 			fail("The length of this DisplayID data block (%d) exceeds the number of bytes remaining (%d).\n", len + 3, length);
+		hex_block("    ", x, length);
 		return length;
 		}
 
@@ -1755,6 +1752,15 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		}
 
 		printf("  %s:\n", data_block.c_str());
+
+	if (version >= 0x20 && (tag < 0x20 || tag == 0x7f))
+		fail("Use of DisplayID v1.x tag for DisplayID v%u.%u.\n",
+			 version >> 4, version & 0xf);
+	if (version < 0x20 && tag >= 0x20 && tag <= 0x7e)
+		fail("Use of DisplayID v2.0 tag for DisplayID v%u.%u.\n",
+			 version >> 4, version & 0xf);
+
+	unsigned block_rev = x[1] & 0x07;
 
 		switch (tag) {
 	case 0x00: parse_displayid_product_id(x); break;
