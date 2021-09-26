@@ -2094,10 +2094,9 @@ void edid_state::cta_ext_block(const unsigned char *x, unsigned length,
 		break;
 	}
 
-
 	// See Table 52 of CTA-861-G for a description of Byte 3
 	if (audio_block && !(cta.byte3 & 0x40))
-		fail("audio information is present, but bit 6 of Byte 3 of the CTA-861 Extension header indicates no Basic Audio support.\n");
+		fail("Audio information is present, but bit 6 of Byte 3 of the CTA-861 Extension header indicates no Basic Audio support.\n");
 
 	if (data_block.length())
 		printf("  %s:\n", data_block.c_str());
