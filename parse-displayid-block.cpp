@@ -1651,16 +1651,23 @@ void edid_state::preparse_displayid_block(const unsigned char *x)
 	}
 }
 
+#define data_block_o(n, a, b) \
+do { \
+	data_block_oui(n, x + 3, len, &ouinum, tag == 0, a, b); \
+	dooutputname = false; \
+} while (0)
+
 unsigned edid_state::displayid_block(const unsigned version, const unsigned char *x, unsigned length)
 {
 	unsigned i;
 	unsigned tag = x[0];
-		unsigned oui = 0;
+	unsigned ouinum = 0;
+	bool dooutputname = true;
 	unsigned len = (length < 3) ? 0 : x[2];
 
 		switch (tag) {
 		// DisplayID 1.3:
-		case 0x00: data_block = "Product Identification Data Block (" + utohex(tag) + ")"; break;
+	case 0x00: data_block_o("Product Identification Data Block (" + utohex(tag) + ")", true, false); ouinum = 0; break;
 		case 0x01: data_block = "Display Parameters Data Block (" + utohex(tag) + ")"; break;
 		case 0x02: data_block = "Color Characteristics Data Block"; break;
 		case 0x03: data_block = "Video Timing Modes Type 1 - Detailed Timings Data Block"; break;
@@ -1682,7 +1689,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		case 0x13: data_block = "Video Timing Modes Type 6 - Detailed Timings Data Block"; break;
 		// 0x14 .. 0x7e RESERVED for Additional VESA-defined Data Blocks
 		// DisplayID 2.0
-		case 0x20: data_block = "Product Identification Data Block (" + utohex(tag) + ")"; break;
+	case 0x20: data_block_o("Product Identification Data Block (" + utohex(tag) + ")", false, false); ouinum = 0; break;
 		case 0x21: data_block = "Display Parameters Data Block (" + utohex(tag) + ")"; break;
 		case 0x22: data_block = "Video Timing Modes Type 7 - Detailed Timings Data Block"; break;
 		case 0x23: data_block = "Video Timing Modes Type 8 - Enumerated Timing Codes Data Block"; break;
@@ -1695,26 +1702,8 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		case 0x2b: data_block = "Adaptive Sync Data Block"; break;
 		case 0x32: data_block = "Video Timing Modes Type 10 - Formula-based Timings Data Block"; break;
 		// 0x2a .. 0x7d RESERVED for Additional VESA-defined Data Blocks
-		case 0x7e: // DisplayID 2.0
-		case 0x7f: // DisplayID 1.3
-		{
-			oui = (x[3] << 16) + (x[4] << 8) + x[5];
-				const char *name = oui_name(oui);
-				bool reversed = false;
-
-				if (!name) {
-					name = oui_name(oui, true);
-					if (name)
-						reversed = true;
-				}
-				if (name)
-				data_block = "Vendor-Specific Data Block (" + utohex(tag) + ") (" + name + ")";
-				else
-				data_block = "Vendor-Specific Data Block (" + utohex(tag) + "), OUI " + ouitohex(oui);
-				if (reversed)
-					fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order.\n").c_str());
-			}
-			break;
+	case 0x7e: data_block_o("Vendor-Specific Data Block (" + utohex(tag) + ")", false, true); break; // DisplayID 2.0
+	case 0x7f: data_block_o("Vendor-Specific Data Block (" + utohex(tag) + ")", true, false); break; // DisplayID 1.3
 		// 0x80 RESERVED
 	case 0x81: data_block = "CTA-861 DisplayID Data Block"; break;
 		// 0x82 .. 0xff RESERVED
@@ -1751,6 +1740,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		return length;
 		}
 
+	if (dooutputname && data_block.length())
 		printf("  %s:\n", data_block.c_str());
 
 	if (version >= 0x20 && (tag < 0x20 || tag == 0x7f))
@@ -1762,6 +1752,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 
 	unsigned block_rev = x[1] & 0x07;
 
+	tag |= ouinum;
 		switch (tag) {
 	case 0x00: parse_displayid_product_id(x); break;
 	case 0x01: parse_displayid_parameters(x); break;
@@ -1882,14 +1873,9 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 			   parse_displayid_type_10_timing(&x[3 + i * sz], sz);
 			   break;
 		}
+	case 0x7e|kOUI_VESA: parse_displayid_vesa(x); break;
 	case 0x81: parse_displayid_cta_data_block(x); break;
-		case 0x7e:
-			if (oui == 0x3a0292) {
-			parse_displayid_vesa(x);
-				break;
-			}
-			// fall-through
-	default: hex_block("    ", x + 3, len); break;
+	default: hex_block("    ", x + 3 + (ouinum ? 3 : 0), len - (ouinum ? 3 : 0)); break;
 		}
 
 		if ((tag == 0x00 || tag == 0x20) &&

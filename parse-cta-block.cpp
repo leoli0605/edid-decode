@@ -2029,9 +2029,10 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 
 #define data_block_o(n) \
 	do { \
-		data_block_oui(n, x, length, &oui); \
+		data_block_oui(n, x, length, &ouinum); \
 		x += (length < 3) ? length : 3; \
 		length -= (length < 3) ? length : 3; \
+		dooutputname = false; \
 	} while(0)
 
 void edid_state::cta_block(const unsigned char *x, bool duplicate)
@@ -2047,7 +2048,8 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		x++;
 	}
 
-	unsigned oui;
+	unsigned ouinum = 0;
+	bool dooutputname = true;
 	bool audio_block = false;
 	data_block.clear();
 
@@ -2100,7 +2102,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		warn("%s.\n", unknown_name.c_str());
 	}
 
-	if (data_block.length())
+	if (dooutputname && data_block.length())
 		printf("  %s:\n", data_block.c_str());
 
 	switch (tag) {
@@ -2125,53 +2127,37 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	if (audio_block && !(cta.byte3 & 0x40))
 		fail("Audio information is present, but bit 6 of Byte 3 of the CTA-861 Extension header indicates no Basic Audio support.\n");
 
+	tag |= ouinum;
 	switch (tag) {
 	case 0x01: cta_audio_block(x, length); break;
 	case 0x02: cta_svd(x, length, false); break;
-	case 0x03:
-		if (oui == 0x000c03) {
-			cta_hdmi_block(x, length);
-			cta.last_block_was_hdmi_vsdb = 1;
-			cta.block_number++;
-			// The HDMI OUI is present, so this EDID represents an HDMI
-			// interface. And HDMI interfaces must use EDID version 1.3
-			// according to the HDMI Specification, so check for this.
-			if (base.edid_minor != 3)
-				fail("The HDMI Specification requires EDID 1.3 instead of 1.%u.\n",
-				     base.edid_minor);
-			return;
-		}
-		if (oui == 0xc45dd8) {
-			if (!cta.last_block_was_hdmi_vsdb)
-				fail("HDMI Forum VSDB did not immediately follow the HDMI VSDB.\n");
-			if (cta.have_hf_scdb || cta.have_hf_vsdb)
-				fail("Duplicate HDMI Forum VSDB/SCDB.\n");
-			cta_hf_scdb(x, length);
-			cta.have_hf_vsdb = 1;
-			break;
-		}
-		if (oui == 0x00001a) {
-			cta_amd(x, length);
-			break;
-		}
-		if (oui == 0xca125c && length == 0x12) {
-			cta_microsoft(x, length);
-			break;
-		}
-		hex_block("    ", x, length);
+	case 0x03|kOUI_HDMI:
+		cta_hdmi_block(x, length);
+		cta.last_block_was_hdmi_vsdb = 1;
+		cta.block_number++;
+		// The HDMI OUI is present, so this EDID represents an HDMI
+		// interface. And HDMI interfaces must use EDID version 1.3
+		// according to the HDMI Specification, so check for this.
+		if (base.edid_minor != 3)
+			fail("The HDMI Specification requires EDID 1.3 instead of 1.%u.\n",
+				 base.edid_minor);
+		return;
+	case 0x03|kOUI_HDMIForum:
+		if (!cta.last_block_was_hdmi_vsdb)
+			fail("HDMI Forum VSDB did not immediately follow the HDMI VSDB.\n");
+		if (cta.have_hf_scdb || cta.have_hf_vsdb)
+			fail("Duplicate HDMI Forum VSDB/SCDB.\n");
+		cta_hf_scdb(x, length);
+		cta.have_hf_vsdb = 1;
 		break;
+	case 0x03|kOUI_AMD: cta_amd(x, length); break;
+	case 0x03|kOUI_Microsoft: if (length != 0x12) goto dodefault; cta_microsoft(x, length); break;
 	case 0x04: cta_sadb(x, length); break;
 	case 0x05: cta_vesa_dtcdb(x, length); break;
 	case 0x07: fail("Extended tag cannot have zero length.\n"); break;
 	case 0x700: cta_vcdb(x, length); break;
-	case 0x701:
-		if (oui == 0x90848b)
-			cta_hdr10plus(x, length);
-		else if (oui == 0x00d046)
-			cta_dolby_video(x, length);
-		else
-			hex_block("    ", x, length);
-		break;
+	case 0x701|kOUI_HDR10: cta_hdr10plus(x, length); break;
+	case 0x701|kOUI_Dolby: cta_dolby_video(x, length); break;
 	case 0x702: cta_vesa_vdddb(x, length); break;
 	case 0x705: cta_colorimetry_block(x, length); break;
 	case 0x706: cta_hdr_static_metadata_block(x, length); break;
@@ -2179,12 +2165,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x70d: cta_vfpdb(x, length); break;
 	case 0x70e: cta_svd(x, length, true); break;
 	case 0x70f: cta_y420cmdb(x, length); break;
-	case 0x711:
-		if (oui == 0x00d046)
-			cta_dolby_audio(x, length);
-		else
-			hex_block("    ", x, length);
-		break;
+	case 0x711|kOUI_Dolby: cta_dolby_audio(x, length); break;
 	case 0x712: cta_hdmi_audio_block(x, length); break;
 	case 0x713: cta_rcdb(x, length); break;
 	case 0x714: cta_sldb(x, length); break;
@@ -2213,6 +2194,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		cta_hf_scdb(x + 2, length - 2);
 		cta.have_hf_scdb = 1;
 		break;
+dodefault:
 	default:
 		hex_block("    ", x, length);
 		break;

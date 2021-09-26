@@ -657,60 +657,95 @@ std::string utohex(unsigned char x)
 	return buf;
 }
 
-const char *oui_name(unsigned oui, bool reverse)
+const char *oui_name(unsigned oui, unsigned *ouinum)
 {
-	if (reverse)
-		oui = (oui >> 16) | (oui & 0xff00) | ((oui & 0xff) << 16);
-
+	unsigned ouinumscratch;
+	if (!ouinum) ouinum = &ouinumscratch;
+	const char *name;
 	switch (oui) {
-	case 0x00001a: return "AMD";
-	case 0x000c03: return "HDMI";
-	case 0x00044b: return "NVIDIA";
-	case 0x000c6e: return "ASUS";
-	case 0x0010fa: return "Apple";
-	case 0x0014b9: return "MSTAR";
-	case 0x00d046: return "Dolby";
-	case 0x00e047: return "InFocus";
-	case 0x3a0292: return "VESA";
-	case 0x90848b: return "HDR10+";
-	case 0xc45dd8: return "HDMI Forum";
-	case 0xca125c: return "Microsoft";
-	default: return NULL;
+		#define oneoui(c,k,n) case c: *ouinum = kOUI_##k; name = n; break;
+		#include "oui.h"
+		default: *ouinum = 0; name = NULL;
 	}
+	return name;
 }
 
-void edid_state::data_block_oui(const char *block_name, const unsigned char *x, unsigned length, unsigned *ouinum)
+void edid_state::data_block_oui(std::string block_name, const unsigned char *x,
+	unsigned length, unsigned *ouinum, bool ignorezeros, bool do_ascii, bool big_endian)
 {
-	const char *name;
-	unsigned oui = 0;
-	bool reverse = false;
+	std::string buf;
+	char ascii[4];
+	unsigned oui;
+	const char *ouiname = NULL;
+	bool matched_reverse = false;
+	bool matched_ascii = false;
+	bool valid_ascii = false;
 
+	if (big_endian)
+		oui = ((length > 0 ? x[0] : 0) << 16) + ((length > 1 ? x[1] : 0) << 8) + (length > 2 ? x[2] : 0);
+	else
+		oui = ((length > 2 ? x[2] : 0) << 16) + ((length > 1 ? x[1] : 0) << 8) + (length > 0 ? x[0] : 0);
+
+	buf = ouitohex(oui);
 	if (length < 3) {
-		printf("  %s:\n", block_name);
-		data_block = std::string(block_name);
-		fail("Invalid length %u < 3.\n", length);
-		data_block.clear();
-	}
-	else {
-		oui = (x[2] << 16) + (x[1] << 8) + x[0];
-		name = oui_name(oui);
-		if (!name) {
-			name = oui_name(oui, true);
-			if (name)
-				reverse = true;
+		sprintf(ascii, "?"); // some characters are null
+		if (ouinum) *ouinum = 0; // doesn't match a known OUI
+	} else {
+		valid_ascii = (x[0] >= 'A' && x[1] >= 'A' && x[2] >= 'A' && x[0] <= 'Z' && x[1] <= 'Z' && x[2] <= 'Z');
+		sprintf(ascii, "%c%c%c", x[0], x[1], x[2]);
+
+		ouiname = oui_name(oui, ouinum);
+		if (!ouiname) {
+			big_endian = !big_endian;
+			unsigned reversedoui = ((oui & 0xff) << 16) + (oui & 0x00ff00) + (oui >> 16);
+			ouiname = oui_name(reversedoui, ouinum);
+			if (ouiname) {
+				oui = reversedoui;
+				buf = ouitohex(oui);
+				matched_reverse = true;
+			}
+			else if (do_ascii && valid_ascii)
+			{
+				unsigned asciioui = (x[0] << 24) + (x[1] << 16) + (x[2] << 8);
+				ouiname = oui_name(asciioui, ouinum);
+				if (ouiname) {
+					matched_ascii = true;
+				}
+			}
 		}
-		if (!name) {
-			printf("  %s, OUI %s:\n", block_name, ouitohex(oui).c_str());
-			data_block.clear();
-			warn("Unknown %s, OUI %s.\n", block_name, ouitohex(oui).c_str());
+	}
+
+	std::string name;
+	if (ouiname) {
+		if (matched_ascii)
+			name = block_name + " (" + ouiname + ")" + ", PNP ID '" + ascii + "'";
+		else
+			name = block_name + " (" + ouiname + ")" + ", OUI " + buf;
+	} else if (do_ascii && valid_ascii) {
+		name = block_name + ", PNP ID '" + ascii + "'";
+	} else {
+		name = block_name + ", OUI " + buf;
+	}
+	// assign string to data_block before outputting errors
+	data_block = name;
+
+	if (oui || !ignorezeros) {
+		printf("  %s:\n", data_block.c_str());
+		if (length < 3)
+			fail("Data block length (%d) is not enough to contain an OUI.\n", length);
+		else if (ouiname) {
+			if (do_ascii && !valid_ascii)
+				warn("Expected PNP ID but found OUI.\n");
+			if (matched_reverse)
+				fail("Endian-ness (%s) of OUI is different than expected (%s).\n", big_endian ? "be" : "le", big_endian ? "le" : "be");
 		}
 		else {
-			data_block = std::string(block_name) + " (" + name + "), OUI " + ouitohex(oui);
-			if (reverse)
-				fail((std::string("OUI ") + ouitohex(oui) + " is in the wrong byte order\n").c_str());
+			if (valid_ascii)
+				warn("Unknown OUI %s (possible PNP %s).\n", buf.c_str(), ascii);
+			else
+				warn("Unknown OUI %s.\n", buf.c_str());
 		}
 	}
-	if (ouinum) *ouinum = oui;
 }
 
 std::string ouitohex(unsigned oui)

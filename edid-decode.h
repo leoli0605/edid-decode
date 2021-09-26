@@ -334,7 +334,8 @@ struct edid_state {
 	void list_dmts();
 	void list_established_timings();
 
-	void data_block_oui(const char *block_name, const unsigned char *x, unsigned length, unsigned *ouinum);
+	void data_block_oui(std::string block_name, const unsigned char *x, unsigned length, unsigned *ouinum,
+	                    bool ignorezeros = false, bool do_ascii = false, bool big_endian = false);
 
 	void print_vic_index(const char *prefix, unsigned idx, const char *suffix, bool ycbcr420 = false);
 	void hdmi_latency(unsigned char vid_lat, unsigned char aud_lat, bool is_ilaced);
@@ -460,7 +461,7 @@ void hex_block(const char *prefix, const unsigned char *x, unsigned length,
 	       bool show_ascii = true, unsigned step = 16);
 std::string block_name(unsigned char block);
 void calc_ratio(struct timings *t);
-const char *oui_name(unsigned oui, bool reverse = false);
+const char *oui_name(unsigned oui, unsigned *ouinum = NULL);
 
 bool timings_close_match(const timings &t1, const timings &t2);
 const struct timings *find_dmt_id(unsigned char dmt_id);
@@ -470,5 +471,8 @@ const struct timings *find_hdmi_vic_id(unsigned char hdmi_vic);
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic);
 unsigned char hdmi_vic_to_vic(unsigned char hdmi_vic);
 char *extract_string(const unsigned char *x, unsigned len);
+
+#define oneoui(c,k,n) const unsigned kOUI_##k = __LINE__<<12;
+#include "oui.h"
 
 #endif
