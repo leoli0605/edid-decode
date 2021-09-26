@@ -395,7 +395,7 @@ struct edid_state {
 	void parse_displayid_type_10_timing(const unsigned char *x, unsigned sz,
 					    bool is_cta = false);
 	void preparse_displayid_block(const unsigned char *x);
-	unsigned displayid_block(const unsigned version, const unsigned char *x, unsigned offset, unsigned length);
+	unsigned displayid_block(const unsigned version, const unsigned char *x, unsigned length);
 	void parse_displayid_block(const unsigned char *x);
 	void parse_displayid_vesa(const unsigned char *x);
 	void parse_displayid_cta_data_block(const unsigned char *x);
