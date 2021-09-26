@@ -7,6 +7,7 @@
  * Maintainer: Hans Verkuil <hverkuil-cisco@xs4all.nl>
  */
 
+#include <algorithm>
 #include <stdio.h>
 #include <math.h>
 
@@ -2029,13 +2030,15 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 
 #define data_block_o(n) \
 	do { \
+		unsigned ouinum; \
 		data_block_oui(n, x, length, &ouinum); \
 		x += (length < 3) ? length : 3; \
 		length -= (length < 3) ? length : 3; \
 		dooutputname = false; \
+		tag |= ouinum; \
 	} while(0)
 
-void edid_state::cta_block(const unsigned char *x, bool duplicate)
+void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_tags)
 {
 	unsigned length = x[0] & 0x1f;
 	unsigned tag=(x[0] & 0xe0) >> 5;
@@ -2048,7 +2051,6 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		x++;
 	}
 
-	unsigned ouinum = 0;
 	bool dooutputname = true;
 	bool audio_block = false;
 	data_block.clear();
@@ -2118,7 +2120,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	case 0x713:
 	case 0x778:
 	case 0x779:
-		if (duplicate)
+		if (std::find(found_tags.begin(), found_tags.end(), tag) != found_tags.end())
 			fail("Only one instance of this Data Block is allowed.\n");
 		break;
 	}
@@ -2127,28 +2129,25 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 	if (audio_block && !(cta.byte3 & 0x40))
 		fail("Audio information is present, but bit 6 of Byte 3 of the CTA-861 Extension header indicates no Basic Audio support.\n");
 
-	tag |= ouinum;
 	switch (tag) {
 	case 0x01: cta_audio_block(x, length); break;
 	case 0x02: cta_svd(x, length, false); break;
 	case 0x03|kOUI_HDMI:
 		cta_hdmi_block(x, length);
-		cta.last_block_was_hdmi_vsdb = 1;
-		cta.block_number++;
 		// The HDMI OUI is present, so this EDID represents an HDMI
 		// interface. And HDMI interfaces must use EDID version 1.3
 		// according to the HDMI Specification, so check for this.
 		if (base.edid_minor != 3)
 			fail("The HDMI Specification requires EDID 1.3 instead of 1.%u.\n",
 				 base.edid_minor);
-		return;
+		break;
 	case 0x03|kOUI_HDMIForum:
-		if (!cta.last_block_was_hdmi_vsdb)
+		if (cta.previous_cta_tag != (0x03|kOUI_HDMI))
 			fail("HDMI Forum VSDB did not immediately follow the HDMI VSDB.\n");
 		if (cta.have_hf_scdb || cta.have_hf_vsdb)
 			fail("Duplicate HDMI Forum VSDB/SCDB.\n");
 		cta_hf_scdb(x, length);
-		cta.have_hf_vsdb = 1;
+		cta.have_hf_vsdb = true;
 		break;
 	case 0x03|kOUI_AMD: cta_amd(x, length); break;
 	case 0x03|kOUI_Microsoft: if (length != 0x12) goto dodefault; cta_microsoft(x, length); break;
@@ -2180,7 +2179,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 			fail("Block starts at a wrong offset.\n");
 		break;
 	case 0x779:
-		if (!cta.last_block_was_hdmi_vsdb)
+		if (cta.previous_cta_tag != (0x03|kOUI_HDMI))
 			fail("HDMI Forum SCDB did not immediately follow the HDMI VSDB.\n");
 		if (cta.have_hf_scdb || cta.have_hf_vsdb)
 			fail("Duplicate HDMI Forum VSDB/SCDB.\n");
@@ -2192,7 +2191,7 @@ void edid_state::cta_block(const unsigned char *x, bool duplicate)
 		if (x[0] || x[1])
 			printf("  Non-zero SCDB reserved fields!\n");
 		cta_hf_scdb(x + 2, length - 2);
-		cta.have_hf_scdb = 1;
+		cta.have_hf_scdb = true;
 		break;
 dodefault:
 	default:
@@ -2201,7 +2200,8 @@ dodefault:
 	}
 
 	cta.block_number++;
-	cta.last_block_was_hdmi_vsdb = 0;
+	cta.previous_cta_tag = tag;
+	found_tags.push_back(tag);
 }
 
 void edid_state::preparse_cta_block(const unsigned char *x)
@@ -2347,15 +2347,7 @@ void edid_state::parse_cta_block(const unsigned char *x)
 			unsigned i;
 
 			for (i = 4; i < offset; i += (x[i] & 0x1f) + 1) {
-				unsigned tag = (x[i] & 0xe0) << 3;
-
-				if (tag == 0x700)
-					tag |= x[i + 1];
-				bool duplicate = cta.found_tags.find(tag) != cta.found_tags.end();
-
-				cta_block(x + i, duplicate);
-				if (!duplicate)
-					cta.found_tags.insert(tag);
+				cta_block(x + i, cta.found_tags);
 			}
 
 			data_block.clear();

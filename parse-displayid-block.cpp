@@ -1556,15 +1556,7 @@ void edid_state::parse_displayid_cta_data_block(const unsigned char *x)
 	x += 3;
 
 	for (i = 0; i < len; i += (x[i] & 0x1f) + 1) {
-		unsigned tag = (x[i] & 0xe0) << 3;
-
-		if (tag == 0x700)
-			tag |= x[i + 1];
-		bool duplicate = dispid.found_tags.find(tag) != dispid.found_tags.end();
-
-		cta_block(x + i, duplicate);
-		if (!duplicate)
-			dispid.found_tags.insert(tag);
+		cta_block(x + i, dispid.found_tags);
 	}
 
 	if (i != len)
@@ -1653,21 +1645,25 @@ void edid_state::preparse_displayid_block(const unsigned char *x)
 
 #define data_block_o(n, a, b) \
 do { \
+	unsigned ouinum; \
 	data_block_oui(n, x + 3, len, &ouinum, tag == 0, a, b); \
 	dooutputname = false; \
+	if (tag != 0x00 && tag != 0x20) tag |= ouinum; \
+	hasoui = true; \
 } while (0)
 
 unsigned edid_state::displayid_block(const unsigned version, const unsigned char *x, unsigned length)
 {
 	unsigned i;
 	unsigned tag = x[0];
-	unsigned ouinum = 0;
+	unsigned tag_version = (tag < 0x20) ? 1 : (tag < 0x7f) ? 2 : (tag < 0x80) ? 1 : 0;
 	bool dooutputname = true;
 	unsigned len = (length < 3) ? 0 : x[2];
+	bool hasoui = false;
 
 		switch (tag) {
 		// DisplayID 1.3:
-	case 0x00: data_block_o("Product Identification Data Block (" + utohex(tag) + ")", true, false); ouinum = 0; break;
+	case 0x00: data_block_o("Product Identification Data Block (" + utohex(tag) + ")", true, false); break;
 		case 0x01: data_block = "Display Parameters Data Block (" + utohex(tag) + ")"; break;
 		case 0x02: data_block = "Color Characteristics Data Block"; break;
 		case 0x03: data_block = "Video Timing Modes Type 1 - Detailed Timings Data Block"; break;
@@ -1689,7 +1685,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		case 0x13: data_block = "Video Timing Modes Type 6 - Detailed Timings Data Block"; break;
 		// 0x14 .. 0x7e RESERVED for Additional VESA-defined Data Blocks
 		// DisplayID 2.0
-	case 0x20: data_block_o("Product Identification Data Block (" + utohex(tag) + ")", false, false); ouinum = 0; break;
+	case 0x20: data_block_o("Product Identification Data Block (" + utohex(tag) + ")", false, false); break;
 		case 0x21: data_block = "Display Parameters Data Block (" + utohex(tag) + ")"; break;
 		case 0x22: data_block = "Video Timing Modes Type 7 - Detailed Timings Data Block"; break;
 		case 0x23: data_block = "Video Timing Modes Type 8 - Enumerated Timing Codes Data Block"; break;
@@ -1743,16 +1739,15 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	if (dooutputname && data_block.length())
 		printf("  %s:\n", data_block.c_str());
 
-	if (version >= 0x20 && (tag < 0x20 || tag == 0x7f))
+	if (version >= 0x20 && tag_version == 1)
 		fail("Use of DisplayID v1.x tag for DisplayID v%u.%u.\n",
 			 version >> 4, version & 0xf);
-	if (version < 0x20 && tag >= 0x20 && tag <= 0x7e)
+	if (version < 0x20 && tag_version == 2)
 		fail("Use of DisplayID v2.0 tag for DisplayID v%u.%u.\n",
 			 version >> 4, version & 0xf);
 
 	unsigned block_rev = x[1] & 0x07;
 
-	tag |= ouinum;
 		switch (tag) {
 	case 0x00: parse_displayid_product_id(x); break;
 	case 0x01: parse_displayid_parameters(x); break;
@@ -1875,7 +1870,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		}
 	case 0x7e|kOUI_VESA: parse_displayid_vesa(x); break;
 	case 0x81: parse_displayid_cta_data_block(x); break;
-	default: hex_block("    ", x + 3 + (ouinum ? 3 : 0), len - (ouinum ? 3 : 0)); break;
+	default: hex_block("    ", x + 3 + (hasoui ? 3 : 0), (len > (hasoui ? 3 : 0)) ? len - (hasoui ? 3 : 0) : 0); break;
 		}
 
 		if ((tag == 0x00 || tag == 0x20) &&

@@ -153,7 +153,8 @@ struct edid_state {
 		// CTA-861 block state
 		cta.has_vic_1 = cta.first_svd_might_be_preferred = cta.has_sldb =
 			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = false;
-		cta.last_block_was_hdmi_vsdb = cta.have_hf_vsdb = cta.have_hf_scdb = false;
+		cta.previous_cta_tag = 0xfff;
+		cta.have_hf_vsdb = cta.have_hf_scdb = false;
 		cta.block_number = 0;
 		cta.first_svd = true;
 		cta.supported_hdmi_vic_codes = cta.supported_hdmi_vic_vsb_codes = 0;
@@ -244,8 +245,8 @@ struct edid_state {
 		vec_timings_ext preferred_timings;
 		bool preparsed_has_t8vtdb;
 		// Keep track of the found Tag/Extended Tag pairs.
-		// The unsigned value is equal to: (tag << 8) | ext_tag
-		std::set<unsigned> found_tags;
+		// The unsigned value is equal to: (tag) | (OUI enum << 12) or (extended tag) | (tag << 8) | (OUI enum << 12)
+		std::vector<unsigned> found_tags;
 		timings_ext t8vtdb;
 		vec_timings_ext native_timings;
 		bool has_vic_1;
@@ -259,7 +260,7 @@ struct edid_state {
 		bool preparsed_sld;
 		bool has_sldb;
 		unsigned short preparsed_phys_addr;
-		bool last_block_was_hdmi_vsdb;
+		unsigned previous_cta_tag;
 		bool have_hf_vsdb, have_hf_scdb;
 		unsigned block_number;
 		bool first_svd;
@@ -286,8 +287,8 @@ struct edid_state {
 		unsigned native_width, native_height;
 		unsigned block_number;
 		// Keep track of the found CTA-861 Tag/Extended Tag pairs.
-		// The unsigned value is equal to: (tag << 8) | ext_tag
-		std::set<unsigned> found_tags;
+		// The unsigned value is equal to: (tag) | (OUI enum << 12) or (extended tag) | (tag << 8) | (OUI enum << 12)
+		std::vector<unsigned> found_tags;
 	} dispid;
 
 	// Block Map block state
@@ -350,7 +351,7 @@ struct edid_state {
 	void cta_displayid_type_7(const unsigned char *x, unsigned length);
 	void cta_displayid_type_8(const unsigned char *x, unsigned length);
 	void cta_displayid_type_10(const unsigned char *x, unsigned length);
-	void cta_block(const unsigned char *x, bool duplicate);
+	void cta_block(const unsigned char *x, std::vector<unsigned> &found_tags);
 	void preparse_cta_block(const unsigned char *x);
 	void parse_cta_block(const unsigned char *x);
 	void cta_resolve_svr(vec_timings_ext::iterator iter);
