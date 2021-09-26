@@ -1651,47 +1651,9 @@ void edid_state::preparse_displayid_block(const unsigned char *x)
 	}
 }
 
-void edid_state::parse_displayid_block(const unsigned char *x)
+unsigned edid_state::displayid_block(const unsigned version, const unsigned char *x, unsigned offset, unsigned length)
 {
-	unsigned version = x[1];
-	unsigned length = x[2];
-	unsigned prod_type = x[3]; // future check: based on type, check for required data blocks
-	unsigned ext_count = x[4];
 	unsigned i;
-
-	printf("  Version: %u.%u\n  Extension Count: %u\n",
-	       version >> 4, version & 0xf, ext_count);
-
-	if (dispid.is_base_block) {
-		dispid.version = version;
-		printf("  %s: %s\n", product_type(prod_type, true).c_str(),
-		       product_type(prod_type, false).c_str());
-		if (!prod_type)
-			fail("DisplayID Base Block has no product type.\n");
-		if (ext_count != dispid.preparsed_displayid_blocks - 1)
-			fail("Expected %u DisplayID Extension Block%s, but got %u.\n",
-			     ext_count,
-			     ext_count > 1 ? "s" : "",
-			     dispid.preparsed_displayid_blocks - 1);
-	} else {
-		if (prod_type)
-			fail("Product Type should be 0 in extension block.\n");
-		if (ext_count)
-			fail("Extension Count should be 0 in extension block.\n");
-		if (version != dispid.version)
-			fail("Got version %u.%u, expected %u.%u.\n",
-			     version >> 4, version & 0xf,
-			     dispid.version >> 4, dispid.version & 0xf);
-	}
-
-	if (length > 121) {
-		fail("DisplayID length %d is greater than 121.\n", length);
-		length = 121;
-	}
-
-	unsigned offset = 5;
-	bool first_data_block = true;
-	while (length > 0) {
 		unsigned tag = x[offset];
 		unsigned oui = 0;
 
@@ -1773,7 +1735,7 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 			if (tag || x[offset + 1]) {
 				fail("Not enough bytes remain (%d) for a DisplayID data block or the DisplayID filler is non-0.\n", length);
 			}
-			break;
+		return 0xff;
 		}
 
 		unsigned block_rev = x[offset + 1] & 0x07;
@@ -1781,7 +1743,7 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 
 		if (length < len + 3) {
 			fail("The length of this DisplayID data block (%d) exceeds the number of bytes remaining (%d).\n", len + 3, length);
-			break;
+		return 0xff;
 		}
 
 		if (!tag && !len) {
@@ -1789,7 +1751,7 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 			if (!memchk(x + offset, length)) {
 				fail("Non-0 filler bytes in the DisplayID block.\n");
 			}
-			break;
+		return 0xff;
 		}
 
 		printf("  %s:\n", data_block.c_str());
@@ -1925,12 +1887,57 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 		}
 
 		if ((tag == 0x00 || tag == 0x20) &&
-		    (!dispid.is_base_block || !first_data_block))
+		(!dispid.is_base_block || dispid.block_number > 0))
 			fail("%s is required to be the first DisplayID Data Block.\n",
 			     data_block.c_str());
+
+	dispid.block_number++;
+	return len;
+}
+
+void edid_state::parse_displayid_block(const unsigned char *x)
+{
+	unsigned version = x[1];
+	unsigned length = x[2];
+	unsigned prod_type = x[3]; // future check: based on type, check for required data blocks
+	unsigned ext_count = x[4];
+
+	printf("  Version: %u.%u\n  Extension Count: %u\n",
+	       version >> 4, version & 0xf, ext_count);
+
+	if (dispid.is_base_block) {
+		dispid.version = version;
+		printf("  %s: %s\n", product_type(prod_type, true).c_str(),
+		       product_type(prod_type, false).c_str());
+		if (!prod_type)
+			fail("DisplayID Base Block has no product type.\n");
+		if (ext_count != dispid.preparsed_displayid_blocks - 1)
+			fail("Expected %u DisplayID Extension Block%s, but got %u.\n",
+			     ext_count,
+			     ext_count > 1 ? "s" : "",
+			     dispid.preparsed_displayid_blocks - 1);
+	} else {
+		if (prod_type)
+			fail("Product Type should be 0 in extension block.\n");
+		if (ext_count)
+			fail("Extension Count should be 0 in extension block.\n");
+		if (version != dispid.version)
+			fail("Got version %u.%u, expected %u.%u.\n",
+			     version >> 4, version & 0xf,
+			     dispid.version >> 4, dispid.version & 0xf);
+	}
+
+	if (length > 121) {
+		fail("DisplayID length %d is greater than 121.\n", length);
+		length = 121;
+	}
+
+	unsigned offset = 5;
+	while (length > 0) {
+		unsigned len = displayid_block(version, x, offset, length);
+		if (len == 0xff) break;
 		length -= len + 3;
 		offset += len + 3;
-		first_data_block = false;
 	}
 
 	/*

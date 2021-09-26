@@ -176,6 +176,7 @@ struct edid_state {
 		dispid.is_display = dispid.has_product_identification =
 			dispid.has_display_parameters = dispid.has_type_1_7 =
 			dispid.has_display_interface_features = false;
+		dispid.block_number = 0;
 
 		// Block Map block state
 		block_map.saw_block_1 = false;
@@ -283,6 +284,7 @@ struct edid_state {
 		bool has_display_interface_features;
 		vec_timings_ext preferred_timings;
 		unsigned native_width, native_height;
+		unsigned block_number;
 		// Keep track of the found CTA-861 Tag/Extended Tag pairs.
 		// The unsigned value is equal to: (tag << 8) | ext_tag
 		std::set<unsigned> found_tags;
@@ -393,6 +395,7 @@ struct edid_state {
 	void parse_displayid_type_10_timing(const unsigned char *x, unsigned sz,
 					    bool is_cta = false);
 	void preparse_displayid_block(const unsigned char *x);
+	unsigned displayid_block(const unsigned version, const unsigned char *x, unsigned offset, unsigned length);
 	void parse_displayid_block(const unsigned char *x);
 	void parse_displayid_vesa(const unsigned char *x);
 	void parse_displayid_cta_data_block(const unsigned char *x);
