@@ -2090,7 +2090,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 		else if (tag < 0x778) unknown_name = "Unknown CTA-861 Data Block";
 		else if (tag < 0x780) unknown_name = "Unknown CTA-861 HDMI-Related Data Block";
 		else                  unknown_name = "Unknown CTA-861 Data Block";
-		unknown_name += std::string(" (") + (extended ? "extended " : "") + "tag " + utohex(tag & 0xff) + ")";
+		unknown_name += std::string(" (") + (extended ? "extended " : "") + "tag " + utohex(tag & 0xff) + ", length " + std::to_string(length) + ")";
 		printf("  %s:\n", unknown_name.c_str());
 		warn("%s.\n", unknown_name.c_str());
 		break;
