@@ -1475,7 +1475,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 		case 0x00: printf("Monochrome or grayscale display\n"); break;
 		case 0x08: printf("RGB color display\n"); break;
 		case 0x10: printf("Non-RGB color display\n"); break;
-		case 0x18: printf("Undefined display color type\n");
+		case 0x18: printf("Undefined display color type\n"); break;
 		}
 	} else {
 		printf("    Supported color formats: RGB 4:4:4");

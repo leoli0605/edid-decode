@@ -2028,21 +2028,12 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 	}
 }
 
-#define data_block_o(n) \
-	do { \
-		unsigned ouinum; \
-		data_block_oui(n, x, length, &ouinum); \
-		x += (length < 3) ? length : 3; \
-		length -= (length < 3) ? length : 3; \
-		dooutputname = false; \
-		tag |= ouinum; \
-	} while(0)
-
 void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_tags)
 {
 	unsigned length = x[0] & 0x1f;
-	unsigned tag=(x[0] & 0xe0) >> 5;
+	unsigned tag = (x[0] & 0xe0) >> 5;
 	unsigned extended = (tag == 0x07) ? 1 : 0;
+
 	x++;
 	if (extended && length) {
 		tag <<= 8;
@@ -2058,14 +2049,14 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	switch (tag) {
 	case 0x01: data_block = "Audio Data Block"; audio_block = true; break;
 	case 0x02: data_block = "Video Data Block"; break;
-	case 0x03: data_block_o("Vendor-Specific Data Block"); break;
+	case 0x03: data_block = "Vendor-Specific Data Block"; break;
 	case 0x04: data_block = "Speaker Allocation Data Block"; audio_block = true; break;
 	case 0x05: data_block = "VESA Display Transfer Characteristics Data Block"; break;
 
 	case 0x07: data_block = "Unknown CTA-861 Data Block (extended tag truncated)"; break;
 
 	case 0x700: data_block = "Video Capability Data Block"; break;
-	case 0x701: data_block_o("Vendor-Specific Video Data Block"); break;
+	case 0x701: data_block = "Vendor-Specific Video Data Block"; break;
 	case 0x702: data_block = "VESA Video Display Device Data Block"; break;
 	case 0x703: data_block = "VESA Video Timing Block Extension"; break;
 	case 0x704: data_block = "Reserved for HDMI Video Data Block"; break;
@@ -2077,7 +2068,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x70e: data_block = "YCbCr 4:2:0 Video Data Block"; break;
 	case 0x70f: data_block = "YCbCr 4:2:0 Capability Map Data Block"; break;
 	case 0x710: data_block = "Reserved for CTA-861 Miscellaneous Audio Fields"; break;
-	case 0x711: data_block_o("Vendor-Specific Audio Data Block"); audio_block = true; break;
+	case 0x711: data_block = "Vendor-Specific Audio Data Block"; audio_block = true; break;
 	case 0x712: data_block = "HDMI Audio Data Block"; audio_block = true; break;
 	case 0x713: data_block = "Room Configuration Data Block"; audio_block = true; break;
 	case 0x714: data_block = "Speaker Location Data Block"; audio_block = true; break;
@@ -2102,6 +2093,22 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 		unknown_name += std::string(" (") + (extended ? "extended " : "") + "tag " + utohex(tag & 0xff) + ")";
 		printf("  %s:\n", unknown_name.c_str());
 		warn("%s.\n", unknown_name.c_str());
+		break;
+	}
+
+	switch (tag) {
+	case 0x03:
+	case 0x701:
+	case 0x711: {
+		unsigned ouinum;
+
+		data_block_oui(data_block, x, length, &ouinum);
+		x += (length < 3) ? length : 3;
+		length -= (length < 3) ? length : 3;
+		dooutputname = false;
+		tag |= ouinum;
+		break;
+	}
 	}
 
 	if (dooutputname && data_block.length())
