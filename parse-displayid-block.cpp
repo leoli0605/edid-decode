@@ -1651,7 +1651,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	// DisplayID 1.3:
 	case 0x00:
 		data_block_oui("Product Identification Data Block (" + utohex(tag) + ")",
-			       x + 3, len, &ouinum, true, true, false);
+			       x + 3, len, &ouinum, true, true, true);
 		dooutputname = false;
 		hasoui = true;
 		break;

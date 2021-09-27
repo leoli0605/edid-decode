@@ -663,9 +663,9 @@ const char *oui_name(unsigned oui, unsigned *ouinum)
 	if (!ouinum) ouinum = &ouinumscratch;
 	const char *name;
 	switch (oui) {
-		#define oneoui(c,k,n) case c: *ouinum = kOUI_##k; name = n; break;
-		#include "oui.h"
-		default: *ouinum = 0; name = NULL;
+	#define oneoui(c,k,n) case c: *ouinum = kOUI_##k; name = n; break;
+	#include "oui.h"
+	default: *ouinum = 0; name = NULL; break;
 	}
 	return name;
 }
@@ -703,16 +703,12 @@ void edid_state::data_block_oui(std::string block_name, const unsigned char *x,
 				oui = reversedoui;
 				buf = ouitohex(oui);
 				matched_reverse = true;
-			}
-			else if (do_ascii && valid_ascii)
-			{
+			} else if (do_ascii && valid_ascii) {
 				unsigned asciioui = (x[0] << 24) + (x[1] << 16) + (x[2] << 8);
 				ouiname = oui_name(asciioui, ouinum);
-				if (ouiname) {
-					matched_ascii = true;
-				}
 			}
 		}
+		matched_ascii = do_ascii && valid_ascii && ouiname != NULL;
 	}
 
 	std::string name;

@@ -24,10 +24,10 @@ all: edid-decode
 sha = -DSHA=$(shell if test -d .git ; then git rev-parse --short=12 HEAD ; fi)
 date = -DDATE=$(shell if test -d .git ; then TZ=UTC git show --quiet --date='format-local:"%F %T"' --format='%cd'; fi)
 
-edid-decode: $(SOURCES) edid-decode.h Makefile
+edid-decode: $(SOURCES) edid-decode.h oui.h Makefile
 	$(CXX) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $(WARN_FLAGS) -g $(sha) $(date) -o $@ $(SOURCES) -lm
 
-edid-decode.js: $(SOURCES) edid-decode.h Makefile
+edid-decode.js: $(SOURCES) edid-decode.h oui.h Makefile
 	$(EMXX) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $(WARN_FLAGS) $(sha) $(date) -s EXPORTED_FUNCTIONS='["_parse_edid"]' -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' -o $@ $(SOURCES) -lm
 
 clean:
