@@ -15,6 +15,6 @@ oneoui(0xca125c, Microsoft,    "Microsoft"   )
 oneoui(0x3a0292, VESA,         "VESA"        )
 
 // https://uefi.org/pnp_id_list
-oneoui(0x415050, asciiApple,   "Apple"       )  // 'APP\0'
+oneoui(0x41505000, asciiApple,   "Apple"     )  // 'APP\0'
 
 #undef oneoui

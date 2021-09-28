@@ -706,9 +706,11 @@ void edid_state::data_block_oui(std::string block_name, const unsigned char *x,
 			} else if (do_ascii && valid_ascii) {
 				unsigned asciioui = (x[0] << 24) + (x[1] << 16) + (x[2] << 8);
 				ouiname = oui_name(asciioui, ouinum);
+				if (ouiname) {
+					matched_ascii = true;
+				}
 			}
 		}
-		matched_ascii = do_ascii && valid_ascii && ouiname != NULL;
 	}
 
 	std::string name;

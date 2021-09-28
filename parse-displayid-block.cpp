@@ -1678,7 +1678,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	// DisplayID 2.0
 	case 0x20:
 		data_block_oui("Product Identification Data Block (" + utohex(tag) + ")",
-			       x + 3, len, &ouinum, false, false, false);
+			       x + 3, len, &ouinum, false, false, true);
 		dooutputname = false;
 		hasoui = true;
 		break;
@@ -1694,16 +1694,16 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x2b: data_block = "Adaptive Sync Data Block"; break;
 	case 0x32: data_block = "Video Timing Modes Type 10 - Formula-based Timings Data Block"; break;
 	// 0x2a .. 0x7d RESERVED for Additional VESA-defined Data Blocks
-	case 0x7e:
+	case 0x7e: // DisplayID 2.0
 		data_block_oui("Vendor-Specific Data Block (" + utohex(tag) + ")",
 			       x + 3, len, &ouinum, false, false, true);
 		dooutputname = false;
 		hasoui = true;
 		tag |= ouinum;
 		break;
-	case 0x7f:
+	case 0x7f: // DisplayID 1.3
 		data_block_oui("Vendor-Specific Data Block (" + utohex(tag) + ")",
-			       x + 3, len, &ouinum, false, true, false);
+			       x + 3, len, &ouinum, false, true, true);
 		dooutputname = false;
 		hasoui = true;
 		tag |= ouinum;
