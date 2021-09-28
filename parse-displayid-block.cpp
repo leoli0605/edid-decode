@@ -1711,7 +1711,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	// 0x80 RESERVED
 	case 0x81: data_block = "CTA-861 DisplayID Data Block"; break;
 	// 0x82 .. 0xff RESERVED
-	default:   data_block = "Unknown DisplayID Data Block (" + utohex(tag) + ", length " + std::to_string(length) + ")"; break;
+	default:   data_block = "Unknown DisplayID Data Block (" + utohex(tag) + ", length " + std::to_string(len) + ")"; break;
 	}
 
 	if (length < 3) {
