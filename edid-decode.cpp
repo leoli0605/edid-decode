@@ -460,14 +460,14 @@ static void print_v4l2_timing(const struct timings *t,
 
 static void print_detailed_timing(unsigned indent, const struct timings *t)
 {
-	printf("%*sHfront %4d Hsync %3u Hback %3d Hpol %s",
+	printf("%*sHfront %4d Hsync %3u Hback %4d Hpol %s",
 	       indent, "",
 	       t->hfp, t->hsync, t->hbp, t->pos_pol_hsync ? "P" : "N");
 	if (t->hborder)
 		printf(" Hborder %u", t->hborder);
 	printf("\n");
 
-	printf("%*sVfront %4u Vsync %3u Vback %3d",
+	printf("%*sVfront %4u Vsync %3u Vback %4d",
 	       indent, "", t->vfp, t->vsync, t->vbp);
 	if (!t->no_pol_vsync)
 		printf(" Vpol %s", t->pos_pol_vsync ? "P" : "N");
@@ -565,7 +565,7 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 	char buf[10];
 
 	sprintf(buf, "%u%s", t->vact, t->interlaced ? "i" : "");
-	printf("%s%s: %5ux%-5s %7.3f Hz %3u:%-3u %7.3f kHz %8.3f MHz%s\n",
+	printf("%s%s: %5ux%-5s %7.3f Hz %3u:%-3u %8.3f kHz %10.3f MHz%s\n",
 	       prefix, type,
 	       t->hact, buf,
 	       refresh,
