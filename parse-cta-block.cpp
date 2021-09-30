@@ -547,6 +547,55 @@ void edid_state::cta_y420cmdb(const unsigned char *x, unsigned length)
 		     max_idx + 1, cta.preparsed_svds[0].size());
 }
 
+void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
+{
+	char suffix[16];
+
+	if ((svr > 0 && svr < 128) || (svr > 192 && svr < 254)) {
+		const struct timings *t;
+		unsigned char vic = svr;
+
+		sprintf(suffix, "VIC %3u", vic);
+
+		t = find_vic_id(vic);
+		if (t) {
+			print_timings("    ", t, suffix);
+			vec_tim.push_back(timings_ext(*t, suffix, ""));
+		} else {
+			printf("    %s: Unknown\n", suffix);
+			fail("Unknown VIC %u.\n", vic);
+		}
+
+	} else if (svr >= 129 && svr <= 144) {
+		sprintf(suffix, "DTD %3u", svr - 128);
+		if (svr >= cta.preparsed_total_dtds + 129) {
+			printf("    %s: Invalid\n", suffix);
+			fail("Invalid DTD %u.\n", svr - 128);
+		} else {
+			printf("    %s\n", suffix);
+			vec_tim.push_back(timings_ext(svr, suffix));
+		}
+	} else if (svr >= 145 && svr <= 160) {
+		sprintf(suffix, "VTDB %3u", svr - 144);
+		if (svr >= cta.preparsed_total_vtdbs + 145) {
+			printf("    %s: Invalid\n", suffix);
+			fail("Invalid VTDB %u.\n", svr - 144);
+		} else {
+			printf("    %s\n", suffix);
+			vec_tim.push_back(timings_ext(svr, suffix));
+		}
+	} else if (svr == 254) {
+		sprintf(suffix, "T8VTDB");
+		if (!cta.preparsed_has_t8vtdb) {
+			printf("    %s: Invalid\n", suffix);
+			fail("Invalid T8VTDB.\n");
+		} else {
+			printf("    %s\n", suffix);
+			vec_tim.push_back(timings_ext(svr, suffix));
+		}
+	}
+}
+
 void edid_state::cta_vfpdb(const unsigned char *x, unsigned length)
 {
 	unsigned i;
@@ -556,54 +605,8 @@ void edid_state::cta_vfpdb(const unsigned char *x, unsigned length)
 		return;
 	}
 	cta.preferred_timings.clear();
-	for (i = 0; i < length; i++)  {
-		unsigned char svr = x[i];
-		char suffix[16];
-
-		if ((svr > 0 && svr < 128) || (svr > 192 && svr < 254)) {
-			const struct timings *t;
-			unsigned char vic = svr;
-
-			sprintf(suffix, "VIC %3u", vic);
-
-			t = find_vic_id(vic);
-			if (t) {
-				print_timings("    ", t, suffix);
-				cta.preferred_timings.push_back(timings_ext(*t, suffix, ""));
-			} else {
-				printf("    %s: Unknown\n", suffix);
-				fail("Unknown VIC %u.\n", vic);
-			}
-
-		} else if (svr >= 129 && svr <= 144) {
-			sprintf(suffix, "DTD %3u", svr - 128);
-			if (svr >= cta.preparsed_total_dtds + 129) {
-				printf("    %s: Invalid\n", suffix);
-				fail("Invalid DTD %u.\n", svr - 128);
-			} else {
-				printf("    %s\n", suffix);
-				cta.preferred_timings.push_back(timings_ext(svr, suffix));
-			}
-		} else if (svr >= 145 && svr <= 160) {
-			sprintf(suffix, "VTDB %3u", svr - 144);
-			if (svr >= cta.preparsed_total_vtdbs + 145) {
-				printf("    %s: Invalid\n", suffix);
-				fail("Invalid VTDB %u.\n", svr - 144);
-			} else {
-				printf("    %s\n", suffix);
-				cta.preferred_timings.push_back(timings_ext(svr, suffix));
-			}
-		} else if (svr == 254) {
-			sprintf(suffix, "T8VTDB");
-			if (!cta.preparsed_has_t8vtdb) {
-				printf("    %s: Invalid\n", suffix);
-				fail("Invalid T8VTDB.\n");
-			} else {
-				printf("    %s\n", suffix);
-				cta.preferred_timings.push_back(timings_ext(svr, suffix));
-			}
-		}
-	}
+	for (i = 0; i < length; i++)
+		cta_print_svr(x[i], cta.preferred_timings);
 }
 
 static std::string hdmi_latency2s(unsigned char l, bool is_video)

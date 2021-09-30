@@ -343,6 +343,7 @@ struct edid_state {
 	void cta_vcdb(const unsigned char *x, unsigned length);
 	void cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420);
 	void cta_y420cmdb(const unsigned char *x, unsigned length);
+	void cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim);
 	void cta_vfpdb(const unsigned char *x, unsigned length);
 	void cta_rcdb(const unsigned char *x, unsigned length);
 	void cta_sldb(const unsigned char *x, unsigned length);
