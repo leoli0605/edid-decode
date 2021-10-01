@@ -361,6 +361,7 @@ struct edid_state {
 	void cta_list_vics();
 	void cta_list_hdmi_vics();
 
+	void set_displayid_native_res(unsigned w, unsigned h);
 	void parse_digital_interface(const unsigned char *x);
 	void parse_display_device(const unsigned char *x);
 	void parse_display_caps(const unsigned char *x);
@@ -413,6 +414,8 @@ struct edid_state {
 
 	void preparse_extension(const unsigned char *x);
 	void parse_extension(const unsigned char *x);
+	void print_preferred_timings();
+	void print_native_res();
 	int parse_edid();
 };
 

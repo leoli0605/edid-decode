@@ -46,7 +46,7 @@ enum Option {
 	OptHelp = 'h',
 	OptOnlyHexDump = 'H',
 	OptLongTimings = 'L',
-	OptNativeTimings = 'n',
+	OptNativeResolution = 'n',
 	OptOutputFormat = 'o',
 	OptPreferredTimings = 'p',
 	OptPhysicalAddress = 'P',
@@ -75,7 +75,7 @@ static char options[OptLast];
 static struct option long_options[] = {
 	{ "help", no_argument, 0, OptHelp },
 	{ "output-format", required_argument, 0, OptOutputFormat },
-	{ "native-timings", no_argument, 0, OptNativeTimings },
+	{ "native-resolution", no_argument, 0, OptNativeResolution },
 	{ "preferred-timings", no_argument, 0, OptPreferredTimings },
 	{ "physical-address", no_argument, 0, OptPhysicalAddress },
 	{ "skip-hex-dump", no_argument, 0, OptSkipHexDump },
@@ -1286,6 +1286,138 @@ void edid_state::parse_extension(const unsigned char *x)
 	do_checksum("", x, EDID_PAGE_SIZE);
 }
 
+void edid_state::print_preferred_timings()
+{
+	if (base.preferred_timing.is_valid()) {
+		printf("\n----------------\n");
+		printf("\nPreferred Video Timing if only Block 0 is parsed:\n");
+		print_timings("  ", base.preferred_timing, true, false);
+	}
+
+	if (!cta.preferred_timings.empty()) {
+		printf("\n----------------\n");
+		printf("\nPreferred Video Timing%s if Block 0 and CTA-861 Blocks are parsed:\n",
+		       cta.preferred_timings.size() > 1 ? "s" : "");
+		for (vec_timings_ext::iterator iter = cta.preferred_timings.begin();
+		     iter != cta.preferred_timings.end(); ++iter)
+			print_timings("  ", *iter, true, false);
+	}
+
+	if (!dispid.preferred_timings.empty()) {
+		printf("\n----------------\n");
+		printf("\nPreferred Video Timing%s if Block 0 and DisplayID Blocks are parsed:\n",
+		       dispid.preferred_timings.size() > 1 ? "s" : "");
+		for (vec_timings_ext::iterator iter = dispid.preferred_timings.begin();
+		     iter != dispid.preferred_timings.end(); ++iter)
+			print_timings("  ", *iter, true, false);
+	}
+}
+
+void edid_state::print_native_res()
+{
+	typedef std::pair<unsigned, unsigned> resolution;
+	typedef std::set<resolution> resolution_set;
+	resolution_set native_prog, native_int;
+	unsigned native_width = 0, native_height = 0;
+	unsigned native_width_int = 0, native_height_int = 0;
+
+	// Note: it is also a mismatch if Block 0 does not define a
+	// native resolution, but other blocks do.
+	bool native_mismatch = false;
+	bool native_int_mismatch = false;
+
+	if (base.preferred_timing.is_valid() && base.preferred_is_also_native) {
+		if (base.preferred_timing.t.interlaced) {
+			native_width_int = base.preferred_timing.t.hact;
+			native_height_int = base.preferred_timing.t.vact;
+		} else {
+			native_width = base.preferred_timing.t.hact;
+			native_height = base.preferred_timing.t.vact;
+		}
+	}
+
+	if (!native_width && dispid.native_width) {
+		native_width = dispid.native_width;
+		native_height = dispid.native_height;
+		native_mismatch = true;
+	} else if (dispid.native_width && native_width &&
+		   (dispid.native_width != native_width ||
+		    dispid.native_height != native_height)) {
+		native_mismatch = true;
+	}
+
+	for (vec_timings_ext::iterator iter = cta.native_timings.begin();
+	     iter != cta.native_timings.end(); ++iter) {
+		if (iter->t.interlaced) {
+			native_int.insert(std::pair<unsigned, unsigned>(iter->t.hact, iter->t.vact));
+			if (!native_width_int) {
+				native_width_int = iter->t.hact;
+				native_height_int = iter->t.vact;
+				native_int_mismatch = true;
+			} else if (native_width_int &&
+				   (iter->t.hact != native_width_int ||
+				    iter->t.vact != native_height_int)) {
+				native_int_mismatch = true;
+			}
+		} else {
+			native_prog.insert(std::pair<unsigned, unsigned>(iter->t.hact, iter->t.vact));
+			if (!native_width) {
+				native_width = iter->t.hact;
+				native_height = iter->t.vact;
+				native_mismatch = true;
+			} else if (native_width &&
+				   (iter->t.hact != native_width ||
+				    iter->t.vact != native_height)) {
+				native_mismatch = true;
+			}
+		}
+	}
+
+	if (native_width == 0 && native_width_int == 0) {
+		printf("\n----------------\n");
+		printf("\nNo Native Video Resolution was defined.\n");
+		return;
+	}
+
+	if ((native_width || native_width_int) &&
+	    !native_mismatch && !native_int_mismatch) {
+		printf("\n----------------\n");
+		printf("\nNative Video Resolution%s:\n",
+		       native_width && native_width_int ? "s" : "");
+		if (native_width)
+			printf("  %ux%u\n", native_width, native_height);
+		if (native_width_int)
+			printf("  %ux%ui\n", native_width_int, native_height_int);
+		return;
+	}
+
+	if (base.preferred_timing.is_valid() && base.preferred_is_also_native) {
+		printf("\n----------------\n");
+		printf("\nNative Video Resolution if only Block 0 is parsed:\n");
+		printf("  %ux%u%s\n",
+		       base.preferred_timing.t.hact, base.preferred_timing.t.vact,
+		       base.preferred_timing.t.interlaced ? "i" : "");
+	}
+
+	if (!cta.native_timings.empty()) {
+		printf("\n----------------\n");
+		printf("\nNative Video Resolution%s if Block 0 and CTA-861 Blocks are parsed:\n",
+		       native_prog.size() + native_int.size() > 1 ? "s" : "");
+		for (resolution_set::iterator iter = native_prog.begin();
+		     iter != native_prog.end(); ++iter)
+			printf("  %ux%u\n", iter->first, iter->second);
+		for (resolution_set::iterator iter = native_int.begin();
+		     iter != native_int.end(); ++iter)
+			printf("  %ux%ui\n", iter->first, iter->second);
+	}
+
+	if (dispid.native_width) {
+		printf("\n----------------\n");
+		printf("\nNative Video Resolution if the DisplayID Blocks are parsed:\n");
+		printf("  %ux%u\n", dispid.native_width, dispid.native_height);
+	}
+}
+
 int edid_state::parse_edid()
 {
 	hide_serial_numbers = options[OptHideSerialNumbers];
@@ -1329,45 +1461,11 @@ int edid_state::parse_edid()
 	if (has_cta)
 		cta_resolve_svrs();
 
-	if (options[OptPreferredTimings] && base.preferred_timing.is_valid()) {
-		printf("\n----------------\n");
-		printf("\nPreferred Video Timing if only Block 0 is parsed:\n");
-		print_timings("  ", base.preferred_timing, true, false);
-	}
+	if (options[OptPreferredTimings])
+		print_preferred_timings();
 
-	if (options[OptNativeTimings] &&
-	    base.preferred_timing.is_valid() && base.preferred_is_also_native) {
-		printf("\n----------------\n");
-		printf("\nNative Video Timing if only Block 0 is parsed:\n");
-		print_timings("  ", base.preferred_timing, true, false);
-	}
-
-	if (options[OptPreferredTimings] && !cta.preferred_timings.empty()) {
-		printf("\n----------------\n");
-		printf("\nPreferred Video Timing%s if Block 0 and CTA-861 Blocks are parsed:\n",
-		       cta.preferred_timings.size() > 1 ? "s" : "");
-		for (vec_timings_ext::iterator iter = cta.preferred_timings.begin();
-		     iter != cta.preferred_timings.end(); ++iter)
-			print_timings("  ", *iter, true, false);
-	}
-
-	if (options[OptNativeTimings] && !cta.native_timings.empty()) {
-		printf("\n----------------\n");
-		printf("\nNative Video Timing%s if Block 0 and CTA-861 Blocks are parsed:\n",
-		       cta.native_timings.size() > 1 ? "s" : "");
-		for (vec_timings_ext::iterator iter = cta.native_timings.begin();
-		     iter != cta.native_timings.end(); ++iter)
-			print_timings("  ", *iter, true, false);
-	}
-
-	if (options[OptPreferredTimings] && !dispid.preferred_timings.empty()) {
-		printf("\n----------------\n");
-		printf("\nPreferred Video Timing%s if Block 0 and DisplayID Blocks are parsed:\n",
-		       dispid.preferred_timings.size() > 1 ? "s" : "");
-		for (vec_timings_ext::iterator iter = dispid.preferred_timings.begin();
-		     iter != dispid.preferred_timings.end(); ++iter)
-			print_timings("  ", *iter, true, false);
-	}
+	if (options[OptNativeResolution])
+		print_native_res();
 
 	if (!options[OptCheck] && !options[OptCheckInline])
 		return 0;
@@ -1861,7 +1959,7 @@ extern "C" int parse_edid(const char *input)
 	}
 	options[OptCheck] = 1;
 	options[OptPreferredTimings] = 1;
-	options[OptNativeTimings] = 1;
+	options[OptNativeResolution] = 1;
 	state = edid_state();
 	int ret = edid_from_file(input, stderr);
 	return ret ? ret : state.parse_edid();
