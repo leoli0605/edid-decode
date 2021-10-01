@@ -477,7 +477,7 @@ static void print_detailed_timing(unsigned indent, const struct timings *t)
 		printf(" Both Fields");
 	} else if (t->interlaced) {
 		printf(" Vfront +0.5 Odd Field\n");
-		printf("%*sVfront %4d Vsync %3u Vback %3d",
+		printf("%*sVfront %4d Vsync %3u Vback %4d",
 		       indent, "", t->vfp, t->vsync, t->vbp);
 		if (!t->no_pol_vsync)
 			printf(" Vpol %s", t->pos_pol_vsync ? "P" : "N");
