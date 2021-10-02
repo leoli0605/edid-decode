@@ -47,6 +47,7 @@ enum Option {
 	OptOnlyHexDump = 'H',
 	OptLongTimings = 'L',
 	OptNativeResolution = 'n',
+	OptNTSC = 'N',
 	OptOutputFormat = 'o',
 	OptPreferredTimings = 'p',
 	OptPhysicalAddress = 'P',
@@ -87,6 +88,7 @@ static struct option long_options[] = {
 	{ "check", no_argument, 0, OptCheck },
 	{ "short-timings", no_argument, 0, OptShortTimings },
 	{ "long-timings", no_argument, 0, OptLongTimings },
+	{ "ntsc", no_argument, 0, OptNTSC },
 	{ "xmodeline", no_argument, 0, OptXModeLineTimings },
 	{ "fbmode", no_argument, 0, OptFBModeTimings },
 	{ "v4l2-timings", no_argument, 0, OptV4L2Timings },
@@ -127,6 +129,7 @@ static void usage(void)
 	       "  -P, --physical-address Only report the CEC physical address.\n"
 	       "  -S, --short-timings   Report all video timings in a short format.\n"
 	       "  -L, --long-timings    Report all video timings in a long format.\n"
+	       "  -N, --ntsc            Report the video timings suitable for NTSC-based video.\n"
 	       "  -X, --xmodeline       Report all long video timings in Xorg.conf format.\n"
 	       "  -F, --fbmode          Report all long video timings in fb.modes format.\n"
 	       "  -V, --v4l2-timings    Report all long video timings in v4l2-dv-timings.h format.\n"
@@ -538,7 +541,14 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 	else if (t->interlaced)
 		vtotal = vact + t->vfp + t->vsync + t->vbp + 0.5;
 
-	double refresh = (double)t->pixclk_khz * 1000.0 / (htotal * vtotal);
+	double refresh = t->pixclk_khz * 1000.0 / (htotal * vtotal);
+	double pixclk = t->pixclk_khz * 1000.0;
+	if (options[OptNTSC] && fmod(refresh, 6.0) == 0) {
+		const double ntsc_fact = 1000.0 / 1001.0;
+		pixclk *= ntsc_fact;
+		refresh *= ntsc_fact;
+		out_hor_freq_khz *= ntsc_fact;
+	}
 
 	std::string s;
 	unsigned rb = t->rb & ~RB_ALT;
@@ -559,19 +569,18 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 		dtd_max_vsize_mm = t->vsize_mm;
 	if (!s.empty())
 		s = " (" + s + ")";
-	unsigned out_pixclk_khz = t->pixclk_khz;
 	unsigned pixclk_khz = t->pixclk_khz / (t->ycbcr420 ? 2 : 1);
 
 	char buf[10];
 
 	sprintf(buf, "%u%s", t->vact, t->interlaced ? "i" : "");
-	printf("%s%s: %5ux%-5s %7.3f Hz %3u:%-3u %8.3f kHz %10.3f MHz%s\n",
+	printf("%s%s: %5ux%-5s %10.6f Hz %3u:%-3u %8.3f kHz %13.6f MHz%s\n",
 	       prefix, type,
 	       t->hact, buf,
 	       refresh,
 	       t->hratio, t->vratio,
 	       out_hor_freq_khz,
-	       out_pixclk_khz / 1000.0,
+	       pixclk / 1000000.0,
 	       s.c_str());
 
 	unsigned len = strlen(prefix) + 2;

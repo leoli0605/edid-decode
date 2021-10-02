@@ -206,6 +206,11 @@ Report all video timings in a short format.
 \fB\-L\fR, \fB\-\-long\-timings\fR
 Report all video timings in a long format.
 .TP
+\fB\-N\fR, \fB\-\-ntsc\fR
+Report the video timings with values suitable for NTSC-based video.
+E.g., this will show refresh rates of 29.97 Hz instead of 30 Hz.
+This is only done for timings with refresh rates that are a multiple of 6.
+.TP
 \fB\-X\fR, \fB\-\-xmodeline\fR
 Report all long video timings in the ModeLine format as defined in xorg.conf(5).
 This ModeLine can be used in the xorg.conf file or passed to xrandr(1) with the
