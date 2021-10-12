@@ -266,7 +266,7 @@ Show the timings for this VIC.
 Show the timings for this HDMI VIC.
 .TP
 \fB\-\-cvt\fR \fBw\fR=\fI<width>\fR,\fBh\fR=\fI<height>\fR,\fBfps\fR=\fI<fps>\fR[,\fBrb\fR=\fI<rb>\fR][,\fBinterlaced\fR][,\fBoverscan\fR]
-[,\fBalt\fR][,\fBhblank\fR=\fI<hblank>\fR][,\fBadd\-vblank\fR=\fI<add\-vblank>\fR]
+[,\fBalt\fR][,\fBhblank\fR=\fI<hblank>\fR][,\fBearly\-vsync\fR]
 .br
 Calculate the CVT timings for the given format.
 
@@ -289,9 +289,7 @@ is 160 instead of 80 pixels.
 If \fBhblank\fR is given and \fI<rb>\fR=3, then the horizontal blanking
 is \fI<hblank>\fR pixels (range of 80-200 and divisible by 8), overriding \fBalt\fR.
 .br
-If \fBadd\-vblank\fR is given and \fI<rb>\fR=3, then \fI<add\-vblank>\fR microseconds are
-added to the minimum vertical blank time of 460 microseconds as long as the total blank
-time does not exceed 25% of the frame time.
+If \fBearly\-vsync\fR is given and \fI<rb>\fR=3, then select an early vsync timing.
 .TP
 \fB\-\-gtf\fR \fBw\fR=\fI<width>\fR,\fBh\fR=\fI<height>\fR[,\fBfps\fR=\fI<fps>\fR][,\fBhorfreq\fR=\fI<horfreq>\fR][,\fBpixclk\fR=\fI<pixclk>\fR]
 [,\fBinterlaced\fR][,\fBoverscan\fR][,\fBsecondary\fR][,\fBC\fR=\fI<c>\fR][,\fBM\fR=\fI<m>\fR][,\fBK\fR=\fI<k>\fR][,\fBJ\fR=\fI<j>\fR]

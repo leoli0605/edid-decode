@@ -131,7 +131,8 @@ void edid_state::edid_gtf_mode(unsigned refresh, struct timings &t)
 // If rb == RB_CVT_V3, then alt means that rb_h_blank is 160 instead of 80.
 timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 				  double ip_freq_rqd, unsigned rb, bool int_rqd,
-				  bool margins_rqd, bool alt, unsigned rb_h_blank)
+				  bool margins_rqd, bool alt, unsigned rb_h_blank,
+				  bool early_vsync_rqd)
 {
 	timings t = {};
 
@@ -205,14 +206,16 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 		double h_period_est = ((1000000.0 / v_field_rate_rqd) - rb_min_vblank) /
 					(v_lines_rnd + vert_margin * 2);
 		double vbi_lines = floor(rb_min_vblank / h_period_est) + 1;
-		double rb_min_vbi = rb_v_fporch + v_sync +
-			(rb == RB_CVT_V1 ? CVT_MIN_V_BPORCH : CVT_FIXED_V_BPORCH);
+		double rb_v_bporch = (rb == RB_CVT_V1 ? CVT_MIN_V_BPORCH : CVT_FIXED_V_BPORCH);
+		double rb_min_vbi = rb_v_fporch + v_sync + rb_v_bporch;
 		v_blank = vbi_lines < rb_min_vbi ? rb_min_vbi : vbi_lines;
 		double total_v_lines = v_blank + v_lines_rnd + vert_margin * 2 + interlace;
+		if (rb == RB_CVT_V3 && early_vsync_rqd)
+			rb_v_bporch = floor(vbi_lines / 2.0);
 		if (rb == RB_CVT_V1)
 			v_sync_bp = v_blank - rb_v_fporch;
 		else
-			v_sync_bp = v_sync + CVT_FIXED_V_BPORCH;
+			v_sync_bp = v_sync + rb_v_bporch;
 		double total_pixels = h_blank + total_active_pixels;
 		double freq = v_field_rate_rqd * total_v_lines * total_pixels * refresh_multiplier;
 		if (rb == RB_CVT_V3)
@@ -242,13 +245,14 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	return t;
 }
 
-void edid_state::edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank)
+void edid_state::edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank,
+			       bool early_vsync_rqd)
 {
 	unsigned hratio = t.hratio;
 	unsigned vratio = t.vratio;
 
 	t = calc_cvt_mode(t.hact, t.vact, refresh, t.rb & ~RB_ALT, t.interlaced,
-			  false, t.rb & RB_ALT, rb_h_blank);
+			  false, t.rb & RB_ALT, rb_h_blank, early_vsync_rqd);
 	t.hratio = hratio;
 	t.vratio = vratio;
 }

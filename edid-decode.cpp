@@ -142,7 +142,7 @@ static void usage(void)
 	       "  --dmt <dmt>           Show the timings for the DMT with the given DMT ID.\n"
 	       "  --vic <vic>           Show the timings for this VIC.\n"
 	       "  --hdmi-vic <hdmivic>  Show the timings for this HDMI VIC.\n"
-	       "  --cvt w=<width>,h=<height>,fps=<fps>[,rb=<rb>][,interlaced][,overscan][,alt][,hblank=<hblank]\n"
+	       "  --cvt w=<width>,h=<height>,fps=<fps>[,rb=<rb>][,interlaced][,overscan][,alt][,hblank=<hblank][,early-vsync]\n"
 	       "                        Calculate the CVT timings for the given format.\n"
 	       "                        <fps> is frames per second for progressive timings,\n"
 	       "                        or fields per second for interlaced timings.\n"
@@ -156,6 +156,7 @@ static void usage(void)
 	       "                        is 160 instead of 80 pixels.\n"
 	       "                        If 'hblank' is given and <rb>=3, then the horizontal blanking\n"
 	       "                        is <hblank> pixels (range of 80-200), overriding 'alt'.\n"
+	       "                        If 'early-vsync' is given and <rb=3>, then select early vsync.\n"
 	       "  --gtf w=<width>,h=<height>[,fps=<fps>][,horfreq=<horfreq>][,pixclk=<pixclk>][,interlaced]\n"
 	       "        [,overscan][,secondary][,C=<c>][,M=<m>][,K=<k>][,J=<j>]\n"
 	       "                        Calculate the GTF timings for the given format.\n"
@@ -1508,6 +1509,7 @@ enum cvt_opts {
 	CVT_RB,
 	CVT_ALT,
 	CVT_RB_H_BLANK,
+	CVT_EARLY_VSYNC,
 };
 
 static int parse_cvt_subopt(char **subopt_str, double *value)
@@ -1524,6 +1526,7 @@ static int parse_cvt_subopt(char **subopt_str, double *value)
 		"rb",
 		"alt",
 		"hblank",
+		"early-vsync",
 		nullptr
 	};
 
@@ -1535,7 +1538,7 @@ static int parse_cvt_subopt(char **subopt_str, double *value)
 		std::exit(EXIT_FAILURE);
 	}
 	if (opt_str == nullptr && opt != CVT_INTERLACED && opt != CVT_ALT &&
-	    opt != CVT_OVERSCAN) {
+	    opt != CVT_OVERSCAN && opt != CVT_EARLY_VSYNC) {
 		fprintf(stderr, "No value given to suboption <%s>.\n",
 				subopt_list[opt]);
 		usage();
@@ -1556,6 +1559,7 @@ static void parse_cvt(char *optarg)
 	bool interlaced = false;
 	bool alt = false;
 	bool overscan = false;
+	bool early_vsync = false;
 
 	while (*optarg != '\0') {
 		int opt;
@@ -1588,6 +1592,9 @@ static void parse_cvt(char *optarg)
 		case CVT_RB_H_BLANK:
 			rb_h_blank = opt_val;
 			break;
+		case CVT_EARLY_VSYNC:
+			early_vsync = true;
+			break;
 		default:
 			break;
 		}
@@ -1601,7 +1608,7 @@ static void parse_cvt(char *optarg)
 	if (interlaced)
 		fps /= 2;
 	timings t = state.calc_cvt_mode(w, h, fps, rb, interlaced, overscan, alt,
-					rb_h_blank);
+					rb_h_blank, early_vsync);
 	state.print_timings("", &t, "CVT", "", true, false);
 }
 

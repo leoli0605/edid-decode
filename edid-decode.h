@@ -318,8 +318,9 @@ struct edid_state {
 	timings calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 			      double ip_freq_rqd, unsigned rb, bool int_rqd = false,
 			      bool margins_rqd = false, bool alt = false,
-			      unsigned rb_h_blank = 0);
-	void edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank = 0);
+			      unsigned rb_h_blank = 0, bool early_vsync_rqd = false);
+	void edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank = 0,
+			   bool early_vsync_rqd = false);
 	void detailed_cvt_descriptor(const char *prefix, const unsigned char *x, bool first);
 	void print_standard_timing(const char *prefix, unsigned char b1, unsigned char b2,
 				   bool gtf_only = false, bool show_both = false);
