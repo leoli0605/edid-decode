@@ -131,8 +131,7 @@ void edid_state::edid_gtf_mode(unsigned refresh, struct timings &t)
 // If rb == RB_CVT_V3, then alt means that rb_h_blank is 160 instead of 80.
 timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 				  double ip_freq_rqd, unsigned rb, bool int_rqd,
-				  bool margins_rqd, bool alt, unsigned rb_h_blank,
-				  double add_vert_time)
+				  bool margins_rqd, bool alt, unsigned rb_h_blank)
 {
 	timings t = {};
 
@@ -160,11 +159,6 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	double pixel_freq;
 	double v_blank;
 	double v_sync_bp;
-
-	if (rb == RB_CVT_V3 && add_vert_time) {
-		if (add_vert_time + rb_min_vblank <= 1000000.0 / ip_freq_rqd / 4.0)
-			rb_min_vblank += add_vert_time;
-	}
 
 	if (rb == RB_CVT_V3 && rb_h_blank) {
 		h_blank = rb_h_blank & ~7;
@@ -248,14 +242,13 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	return t;
 }
 
-void edid_state::edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank,
-			       double add_vert_time)
+void edid_state::edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank)
 {
 	unsigned hratio = t.hratio;
 	unsigned vratio = t.vratio;
 
 	t = calc_cvt_mode(t.hact, t.vact, refresh, t.rb & ~RB_ALT, t.interlaced,
-			  false, t.rb & RB_ALT, rb_h_blank, add_vert_time);
+			  false, t.rb & RB_ALT, rb_h_blank);
 	t.hratio = hratio;
 	t.vratio = vratio;
 }

@@ -142,7 +142,7 @@ static void usage(void)
 	       "  --dmt <dmt>           Show the timings for the DMT with the given DMT ID.\n"
 	       "  --vic <vic>           Show the timings for this VIC.\n"
 	       "  --hdmi-vic <hdmivic>  Show the timings for this HDMI VIC.\n"
-	       "  --cvt w=<width>,h=<height>,fps=<fps>[,rb=<rb>][,interlaced][,overscan][,alt][,hblank=<hblank][,add-vblank=<add-vblank>\n"
+	       "  --cvt w=<width>,h=<height>,fps=<fps>[,rb=<rb>][,interlaced][,overscan][,alt][,hblank=<hblank]\n"
 	       "                        Calculate the CVT timings for the given format.\n"
 	       "                        <fps> is frames per second for progressive timings,\n"
 	       "                        or fields per second for interlaced timings.\n"
@@ -156,8 +156,6 @@ static void usage(void)
 	       "                        is 160 instead of 80 pixels.\n"
 	       "                        If 'hblank' is given and <rb>=3, then the horizontal blanking\n"
 	       "                        is <hblank> pixels (range of 80-200), overriding 'alt'.\n"
-	       "                        If 'add-vblank' is given and <rb>=3, then <add-vblank> usecs are\n"
-	       "                        added to the minimum vertical blank time of 460 usecs.\n"
 	       "  --gtf w=<width>,h=<height>[,fps=<fps>][,horfreq=<horfreq>][,pixclk=<pixclk>][,interlaced]\n"
 	       "        [,overscan][,secondary][,C=<c>][,M=<m>][,K=<k>][,J=<j>]\n"
 	       "                        Calculate the GTF timings for the given format.\n"
@@ -1510,7 +1508,6 @@ enum cvt_opts {
 	CVT_RB,
 	CVT_ALT,
 	CVT_RB_H_BLANK,
-	CVT_RB_ADD_V_BLANK,
 };
 
 static int parse_cvt_subopt(char **subopt_str, double *value)
@@ -1527,7 +1524,6 @@ static int parse_cvt_subopt(char **subopt_str, double *value)
 		"rb",
 		"alt",
 		"hblank",
-		"add-vblank",
 		nullptr
 	};
 
@@ -1557,7 +1553,6 @@ static void parse_cvt(char *optarg)
 	double fps = 0;
 	unsigned rb = RB_NONE;
 	unsigned rb_h_blank = 0;
-	unsigned rb_add_v_blank = 0;
 	bool interlaced = false;
 	bool alt = false;
 	bool overscan = false;
@@ -1593,9 +1588,6 @@ static void parse_cvt(char *optarg)
 		case CVT_RB_H_BLANK:
 			rb_h_blank = opt_val;
 			break;
-		case CVT_RB_ADD_V_BLANK:
-			rb_add_v_blank = opt_val;
-			break;
 		default:
 			break;
 		}
@@ -1609,7 +1601,7 @@ static void parse_cvt(char *optarg)
 	if (interlaced)
 		fps /= 2;
 	timings t = state.calc_cvt_mode(w, h, fps, rb, interlaced, overscan, alt,
-					rb_h_blank, rb_add_v_blank);
+					rb_h_blank);
 	state.print_timings("", &t, "CVT", "", true, false);
 }
 

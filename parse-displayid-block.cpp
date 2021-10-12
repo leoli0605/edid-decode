@@ -1477,24 +1477,24 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 		s += ", YCbCr 4:2:0";
 
 	unsigned refresh = 1 + x[5] + (sz == 6 ? 0 : ((x[6] & 3) << 8));
-	double add_vert_time = 0;
 
 	if (sz > 6 && rb == RB_CVT_V3) {
 		unsigned delta_hblank = (x[6] >> 2) & 7;
 
-		if (rb_h_blank == 80)
+		if ((x[6] >> 5) & 7)
+			fail("Bits 5-7 of byte 6 must be 0.\n");
+		if (rb != RB_CVT_V3) {
+			if ((x[6] >> 2) & 7)
+				fail("Bits 2-4 of byte 6 must be 0.\n");
+		} else if (rb_h_blank == 80)
 			rb_h_blank = 80 + 8 * delta_hblank;
 		else if (delta_hblank <= 5)
 			rb_h_blank = 160 + 8 * delta_hblank;
 		else
 			rb_h_blank = 160 - (delta_hblank - 5) * 8;
-
-		unsigned vblank_time_perc = (x[6] >> 5) & 7;
-
-		add_vert_time = (vblank_time_perc * 10000.0) / refresh;
 	}
 
-	edid_cvt_mode(refresh, t, rb_h_blank, add_vert_time);
+	edid_cvt_mode(refresh, t, rb_h_blank);
 
 	print_timings("    ", &t, "CVT", s.c_str());
 	if (is_cta) {
