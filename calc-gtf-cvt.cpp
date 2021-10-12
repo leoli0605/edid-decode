@@ -132,13 +132,16 @@ void edid_state::edid_gtf_mode(unsigned refresh, struct timings &t)
 timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 				  double ip_freq_rqd, unsigned rb, bool int_rqd,
 				  bool margins_rqd, bool alt, unsigned rb_h_blank,
-				  bool early_vsync_rqd)
+				  unsigned rb_v_blank, bool early_vsync_rqd)
 {
 	timings t = {};
 
 	t.hact = h_pixels;
 	t.vact = v_lines;
 	t.interlaced = int_rqd;
+
+	if (rb_v_blank < CVT_RB_MIN_VBLANK)
+		rb_v_blank = CVT_RB_MIN_VBLANK;
 
 	double cell_gran = rb == RB_CVT_V2 ? 1 : CELL_GRAN;
 	double h_pixels_rnd = floor(h_pixels / cell_gran) * cell_gran;
@@ -153,7 +156,7 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	double h_blank = (rb == RB_CVT_V1 || (rb == RB_CVT_V3 && alt)) ? 160 : 80;
 	double rb_v_fporch = rb == RB_CVT_V1 ? 3 : 1;
 	double refresh_multiplier = (rb == RB_CVT_V2 && alt) ? 1000.0 / 1001.0 : 1;
-	double rb_min_vblank = CVT_RB_MIN_VBLANK;
+	double rb_min_vblank = rb == RB_CVT_V3 ? rb_v_blank : CVT_RB_MIN_VBLANK;
 	double h_sync = 32;
 
 	double v_sync;
@@ -246,13 +249,13 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 }
 
 void edid_state::edid_cvt_mode(unsigned refresh, struct timings &t, unsigned rb_h_blank,
-			       bool early_vsync_rqd)
+			       unsigned rb_v_blank, bool early_vsync_rqd)
 {
 	unsigned hratio = t.hratio;
 	unsigned vratio = t.vratio;
 
 	t = calc_cvt_mode(t.hact, t.vact, refresh, t.rb & ~RB_ALT, t.interlaced,
-			  false, t.rb & RB_ALT, rb_h_blank, early_vsync_rqd);
+			  false, t.rb & RB_ALT, rb_h_blank, rb_v_blank, early_vsync_rqd);
 	t.hratio = hratio;
 	t.vratio = vratio;
 }
