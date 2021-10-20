@@ -124,7 +124,7 @@ static void usage(void)
 	       "                        warnings are reported at the end.\n"
 	       "  -C, --check-inline    Check if the EDID conforms to the standards, failures and\n"
 	       "                        warnings are reported inline.\n"
-	       "  -n, --native-timings  Report the native timings.\n"
+	       "  -n, --native-resolution Report the native resolution.\n"
 	       "  -p, --preferred-timings Report the preferred timings.\n"
 	       "  -P, --physical-address Only report the CEC physical address.\n"
 	       "  -S, --short-timings   Report all video timings in a short format.\n"
