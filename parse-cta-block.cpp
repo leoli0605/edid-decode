@@ -2078,9 +2078,9 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 
 	case 0x720: data_block = "InfoFrame Data Block"; break;
 
-	case 0x734: data_block = "DisplayID Type VII Video Timing Data Block"; break;
-	case 0x735: data_block = "DisplayID Type VIII Video Timing Data Block"; break;
-	case 0x742: data_block = "DisplayID Type X Video Timing Data Block"; break;
+	case 0x722: data_block = "DisplayID Type VII Video Timing Data Block"; break;
+	case 0x723: data_block = "DisplayID Type VIII Video Timing Data Block"; break;
+	case 0x72a: data_block = "DisplayID Type X Video Timing Data Block"; break;
 
 	case 0x778: data_block = "HDMI Forum EDID Extension Override Data Block"; break;
 	case 0x779: data_block = "HDMI Forum Sink Capability Data Block"; break;
@@ -2179,9 +2179,9 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x713: cta_rcdb(x, length); break;
 	case 0x714: cta_sldb(x, length); break;
 	case 0x720: cta_ifdb(x, length); break;
-	case 0x734: cta_displayid_type_7(x, length); break;
-	case 0x735: cta_displayid_type_8(x, length); break;
-	case 0x742: cta_displayid_type_10(x, length); break;
+	case 0x722: cta_displayid_type_7(x, length); break;
+	case 0x723: cta_displayid_type_8(x, length); break;
+	case 0x72a: cta_displayid_type_10(x, length); break;
 	case 0x778:
 		cta_hf_eeodb(x, length);
 		// This must be the first CTA-861 block
@@ -2258,7 +2258,7 @@ void edid_state::preparse_cta_block(const unsigned char *x)
 				cta.preparsed_total_vtdbs++;
 			if (x[i + 1] == 0x23)
 				cta.preparsed_has_t8vtdb = true;
-			if (x[i + 1] == 0x32)
+			if (x[i + 1] == 0x2a)
 				cta.preparsed_total_vtdbs +=
 					((x[i] & 0x1f) - 2) / (6 + ((x[i + 2] & 0x70) >> 4));
 			if (x[i + 1] != 0x0e)
