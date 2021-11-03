@@ -1482,6 +1482,8 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 
 	unsigned rb = t.rb;
 	unsigned rb_h_blank = rb == RB_CVT_V3 ? 80 : 0;
+	unsigned rb_v_blank = 460;
+	bool early_vsync_rqd = false;
 
 	if (x[0] & 0x10) {
 		if (rb == RB_CVT_V2) {
@@ -1498,25 +1500,42 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 	if (x[0] & 0x80)
 		s += ", YCbCr 4:2:0";
 
-	unsigned refresh = 1 + x[5] + (sz == 6 ? 0 : ((x[6] & 3) << 8));
-
-	if (sz > 6 && rb == RB_CVT_V3) {
-		unsigned delta_hblank = (x[6] >> 2) & 7;
-
-		if ((x[6] >> 5) & 7)
-			fail("Bits 5-7 of byte 6 must be 0.\n");
-		if (rb != RB_CVT_V3) {
-			if ((x[6] >> 2) & 7)
-				fail("Bits 2-4 of byte 6 must be 0.\n");
-		} else if (rb_h_blank == 80)
-			rb_h_blank = 80 + 8 * delta_hblank;
-		else if (delta_hblank <= 5)
-			rb_h_blank = 160 + 8 * delta_hblank;
-		else
-			rb_h_blank = 160 - (delta_hblank - 5) * 8;
+	if (x[0] & 0x08) {
+		if (rb == RB_CVT_V3) {
+			early_vsync_rqd = true;
+			s += ", early-vsync";
+		} else {
+			fail("EVS must be 0.\n");
+		}
 	}
 
-	edid_cvt_mode(refresh, t, rb_h_blank);
+	unsigned refresh = 1 + x[5] + (sz == 6 ? 0 : ((x[6] & 3) << 8));
+
+	if (sz > 6) {
+		if (rb == RB_CVT_V3) {
+			unsigned delta_hblank = (x[6] >> 2) & 7;
+
+			if (rb_h_blank == 80)
+				rb_h_blank = 80 + 8 * delta_hblank;
+			else if (delta_hblank <= 5)
+				rb_h_blank = 160 + 8 * delta_hblank;
+			else
+				rb_h_blank = 160 - (delta_hblank - 5) * 8;
+			if (delta_hblank)
+				s += ", delta-hblank=" + std::to_string(delta_hblank);
+
+			rb_v_blank += ((x[6] >> 5) & 7) * 35;
+			if (rb_v_blank > 460)
+				s += ", add-vblank=" + std::to_string(rb_v_blank - 460);
+		} else {
+			if (x[6] & 0xe0)
+				fail("Additional_Vertical_Blank_Time must be 0.\n");
+			if (x[6] & 0x1c)
+				fail("Delta_Horizontal_Blank must be 0.\n");
+		}
+	}
+
+	edid_cvt_mode(refresh, t, rb_h_blank, rb_v_blank, early_vsync_rqd);
 
 	print_timings("    ", &t, name.c_str(), s.c_str());
 	if (is_cta) {
