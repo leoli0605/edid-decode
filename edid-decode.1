@@ -195,6 +195,11 @@ depending on whether the Source only parses Block 0 (e.g. DVI outputs), or Block
 and the CTA-861 Extension Blocks (HDMI), or Block 0 and the DisplayID Extension Blocks
 (typical for DisplayPort).
 .TP
+\fB\-\-diagonal\fR \fI<inches>\fR
+Specify the diagonal of the display in inches. This will enable additional checks
+for the image size, checking if it corresponds to the diagonal. This assumes
+square pixels.
+.TP
 \fB\-P\fR, \fB\-\-physical\-address\fR
 Just report the HDMI Source Physical Address and nothing else. Reports f.f.f.f
 if the EDID could not be parsed, or if there was no CTA-861 Vendor-Specific Data Block

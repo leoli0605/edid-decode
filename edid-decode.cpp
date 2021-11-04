@@ -58,6 +58,7 @@ enum Option {
 	OptSkipSHA = 128,
 	OptHideSerialNumbers,
 	OptVersion,
+	OptDiag,
 	OptSTD,
 	OptDMT,
 	OptVIC,
@@ -92,6 +93,7 @@ static struct option long_options[] = {
 	{ "xmodeline", no_argument, 0, OptXModeLineTimings },
 	{ "fbmode", no_argument, 0, OptFBModeTimings },
 	{ "v4l2-timings", no_argument, 0, OptV4L2Timings },
+	{ "diagonal", required_argument, 0, OptDiag },
 	{ "std", required_argument, 0, OptSTD },
 	{ "dmt", required_argument, 0, OptDMT },
 	{ "vic", required_argument, 0, OptVIC },
@@ -114,7 +116,7 @@ static void usage(void)
 	       "                        if the output filename is '-'.\n"
 	       "\nOptions:\n"
 	       "  -o, --output-format <fmt>\n"
-	       "                        If [out] is specified, then write the EDID in this format\n"
+	       "                        If [out] is specified, then write the EDID in this format.\n"
 	       "                        <fmt> is one of:\n"
 	       "                        hex:    hex numbers in ascii text (default for stdout)\n"
 	       "                        raw:    binary data (default unless writing to stdout)\n"
@@ -136,8 +138,9 @@ static void usage(void)
 	       "  -s, --skip-hex-dump   Skip the initial hex dump of the EDID.\n"
 	       "  -H, --only-hex-dump   Only output the hex dump of the EDID.\n"
 	       "  --skip-sha            Skip the SHA report.\n"
-	       "  --hide-serial-numbers Replace serial numbers with '...'\n"
-	       "  --version             show the edid-decode version (SHA)\n"
+	       "  --hide-serial-numbers Replace serial numbers with '...'.\n"
+	       "  --version             Show the edid-decode version (SHA).\n"
+	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"
 	       "  --dmt <dmt>           Show the timings for the DMT with the given DMT ID.\n"
 	       "  --vic <vic>           Show the timings for this VIC.\n"
@@ -1383,6 +1386,41 @@ void edid_state::print_native_res()
 		}
 	}
 
+	if (diagonal) {
+		if (image_width) {
+			double w = image_width;
+			double h = image_height;
+			double d = sqrt(w * w + h * h) / 254.0;
+
+			if (fabs(diagonal - d) >= 0.1)
+				warn("Specified diagonal is %.1f\", calculated diagonal is %.1f\".\n",
+				     diagonal, d);
+		}
+		if (native_width) {
+			double w = native_width;
+			double h = native_height;
+			double d = diagonal * 254.0;
+			double c = sqrt((d * d) / (w * w + h * h));
+
+			w *= c;
+			h *= c;
+
+			if (image_width) {
+				if (fabs((double)image_width - w) >= 100.0 ||
+				    fabs((double)image_height - h) >= 100.0)
+					warn("Calculated image size is %.1fx%.1fmm, EDID image size is %.1fx%.1fmm.\n",
+					     w / 10.0, h / 10.0,
+					     image_width / 10.0, image_height / 10.0);
+			} else {
+				warn("No image size was specified, but it is calculated as %.1fx%.1fmm.\n",
+				     w / 10.0, h / 10.0);
+			}
+		}
+	}
+
+	if (!options[OptNativeResolution])
+		return;
+
 	if (native_width == 0 && native_width_int == 0) {
 		printf("\n----------------\n");
 		printf("\nNo Native Video Resolution was defined.\n");
@@ -1474,8 +1512,7 @@ int edid_state::parse_edid()
 	if (options[OptPreferredTimings])
 		print_preferred_timings();
 
-	if (options[OptNativeResolution])
-		print_native_res();
+	print_native_res();
 
 	if (!options[OptCheck] && !options[OptCheckInline])
 		return 0;
@@ -1831,6 +1868,9 @@ int main(int argc, char **argv)
 				usage();
 				exit(1);
 			}
+			break;
+		case OptDiag:
+			state.diagonal = strtod(optarg, NULL);
 			break;
 		case OptSTD: {
 			unsigned char byte1, byte2 = 0;

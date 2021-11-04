@@ -130,7 +130,7 @@ struct edid_state {
 		warnings = failures = 0;
 		has_cta = has_dispid = false;
 		hide_serial_numbers = false;
-		image_width = image_height = 0;
+		image_width = image_height = diagonal = 0;
 
 		// Base block state
 		base.edid_minor = 0;
@@ -206,6 +206,8 @@ struct edid_state {
 
 	// in 0.1 mm units
 	unsigned image_width, image_height;
+	// in inches
+	double diagonal;
 
 	unsigned warnings;
 	unsigned failures;
