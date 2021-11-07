@@ -130,6 +130,7 @@ struct edid_state {
 		warnings = failures = 0;
 		has_cta = has_dispid = false;
 		hide_serial_numbers = false;
+		image_width = image_height = 0;
 
 		// Base block state
 		base.edid_minor = 0;
@@ -178,6 +179,7 @@ struct edid_state {
 			dispid.has_display_parameters = dispid.has_type_1_7 =
 			dispid.has_display_interface_features = false;
 		dispid.block_number = 0;
+		dispid.image_width = dispid.image_height = 0;
 
 		// Block Map block state
 		block_map.saw_block_1 = false;
@@ -201,6 +203,9 @@ struct edid_state {
 	unsigned max_pixclk_khz;
 	unsigned dtd_max_hsize_mm;
 	unsigned dtd_max_vsize_mm;
+
+	// in 0.1 mm units
+	unsigned image_width, image_height;
 
 	unsigned warnings;
 	unsigned failures;
@@ -285,6 +290,8 @@ struct edid_state {
 		bool has_display_interface_features;
 		vec_timings_ext preferred_timings;
 		unsigned native_width, native_height;
+		// in 0.1 mm units
+		unsigned image_width, image_height;
 		unsigned block_number;
 		// Keep track of the found CTA-861 Tag/Extended Tag pairs.
 		// The unsigned value is equal to: (tag) | (OUI enum << 12) or (extended tag) | (tag << 8) | (OUI enum << 12)

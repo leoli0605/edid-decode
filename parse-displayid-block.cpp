@@ -157,10 +157,18 @@ void edid_state::parse_displayid_parameters(const unsigned char *x)
 	if (!check_displayid_datablock_length(x, 12, 12))
 		return;
 
+	if (dispid.has_display_parameters)
+		fail("Duplicate Display Parameters Data Block.\n");
 	dispid.has_display_parameters = true;
+	dispid.image_width = (x[4] << 8) + x[3];
+	dispid.image_height = (x[6] << 8) + x[5];
+	if (dispid.image_width > image_width ||
+	    dispid.image_height > image_height) {
+		image_width = dispid.image_width;
+		image_height = dispid.image_height;
+	}
 	printf("    Image size: %.1f mm x %.1f mm\n",
-	       ((x[4] << 8) + x[3]) / 10.0,
-	       ((x[6] << 8) + x[5]) / 10.0);
+	       dispid.image_width / 10.0, dispid.image_height / 10.0);
 	unsigned w = (x[8] << 8) + x[7];
 	unsigned h = (x[10] << 8) + x[9];
 	printf("    Display native pixel format: %ux%u\n", w, h);
@@ -1130,17 +1138,29 @@ void edid_state::parse_displayid_parameters_v2(const unsigned char *x,
 {
 	if (!check_displayid_datablock_length(x, 29, 29))
 		return;
+	if (dispid.has_display_parameters)
+		fail("Duplicate Display Parameters Data Block.\n");
+	dispid.has_display_parameters = true;
 
 	unsigned hor_size = (x[4] << 8) + x[3];
 	unsigned vert_size = (x[6] << 8) + x[5];
 
-	dispid.has_display_parameters = true;
-	if (x[1] & 0x80)
-		printf("    Image size: %u mm x %u mm\n",
-		       hor_size, vert_size);
-	else
+	dispid.image_width = hor_size;
+	dispid.image_height = vert_size;
+	if (x[1] & 0x80) {
+		printf("    Image size: %u mm x %u mm\n", hor_size, vert_size);
+		dispid.image_width *= 10;
+		dispid.image_height *= 10;
+	} else {
 		printf("    Image size: %.1f mm x %.1f mm\n",
 		       hor_size / 10.0, vert_size / 10.0);
+	}
+	if (dispid.image_width > image_width ||
+	    dispid.image_height > image_height) {
+		image_width = dispid.image_width;
+		image_height = dispid.image_height;
+	}
+
 	unsigned w = (x[8] << 8) + x[7];
 	unsigned h = (x[10] << 8) + x[9];
 
@@ -1980,4 +2000,10 @@ void edid_state::check_displayid_blocks()
 		     dispid.version >= 0x20 ? "VII" : "I");
 	if (dispid.preferred_timings.empty())
 		fail("DisplayID expects at least one preferred timing.\n");
+	if (dispid.image_width && dispid.image_width < 25600 && dispid.image_height < 25600 &&
+	    (abs((int)dispid.image_width - (int)base.max_display_width_mm * 10) >= 100 ||
+	     abs((int)dispid.image_height - (int)base.max_display_height_mm * 10) >= 100))
+		fail("Image size mismatch: DisplayID: %.1fx%.1fmm Base EDID: %u.0x%u.0mm.\n",
+		     dispid.image_width / 10.0, dispid.image_height / 10.0,
+		     base.max_display_width_mm, base.max_display_height_mm);
 }

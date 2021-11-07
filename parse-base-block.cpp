@@ -1442,6 +1442,8 @@ void edid_state::parse_base_block(const unsigned char *x)
 		printf("    Maximum image size: %u cm x %u cm\n", x[0x15], x[0x16]);
 		base.max_display_width_mm = x[0x15] * 10;
 		base.max_display_height_mm = x[0x16] * 10;
+		image_width = base.max_display_width_mm * 10;
+		image_height = base.max_display_height_mm * 10;
 		if (x[0x15] < 10 || x[0x16] < 10)
 			warn("Dubious maximum image size (%ux%u is smaller than 10x10 cm).\n",
 			     x[0x15], x[0x16]);
@@ -1701,13 +1703,16 @@ void edid_state::check_base_block()
 		 */
 		msg(!out_of_range || base.edid_minor >= 4, "%s", err.c_str());
 	}
-	// The base block will only go up to 255x255 cm for the display size,
-	// so don't fail if one or more image sizes exceeds that.
-	if (!base.max_display_width_mm && !base.max_display_height_mm &&
-	    dtd_max_hsize_mm && dtd_max_vsize_mm &&
-	    dtd_max_hsize_mm <= 2559 && dtd_max_vsize_mm <= 2559) {
-		fail("The DTD image sizes all fit inside 255x255cm, but no display size was set.\n");
-	}
+
+	if ((image_width && dtd_max_hsize_mm >= 10 + image_width / 10) ||
+	    (image_height && dtd_max_vsize_mm >= 10 + image_height / 10))
+		fail("The DTD max image size is %ux%umm, which is larger than the display size %.1fx%.1fmm.\n",
+		     dtd_max_hsize_mm, dtd_max_vsize_mm,
+		     image_width / 10.0, image_height / 10.0);
+	if ((!image_width && dtd_max_hsize_mm) || (!image_height && dtd_max_vsize_mm))
+		fail("The DTD max image size is %ux%umm, but the display size is not specified anywhere.\n",
+		     dtd_max_hsize_mm, dtd_max_vsize_mm);
+
 	// Secondary GTF curves start at a specific frequency. Any legacy timings
 	// that have a positive hsync and negative vsync must be less than that
 	// frequency to avoid confusion.
