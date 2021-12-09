@@ -937,6 +937,8 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 		printf("    SCDC Present\n");
 	if (x[2] & 0x40)
 		printf("    SCDC Read Request Capable\n");
+	if (x[2] & 0x20)
+		printf("    Supports Cable Status\n");
 	if (x[2] & 0x10)
 		printf("    Supports Color Content Bits Per Component Indication\n");
 	if (x[2] & 0x08)
