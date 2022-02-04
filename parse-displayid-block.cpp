@@ -250,6 +250,7 @@ void edid_state::parse_displayid_type_1_7_timing(const unsigned char *x,
 {
 	struct timings t = {};
 	unsigned hbl, vbl;
+	std::string name = is_cta ? std::string("VTDB ") + std::to_string(cta.vec_vtdbs.size() + 1) : "DTD";
 	std::string s("aspect ");
 
 	dispid.has_type_1_7 = true;
@@ -346,9 +347,9 @@ void edid_state::parse_displayid_type_1_7_timing(const unsigned char *x,
 		dispid.preferred_timings.push_back(timings_ext(t, "DTD", s));
 	}
 
-	print_timings("    ", &t, "DTD", s.c_str(), true);
+	print_timings("    ", &t, name.c_str(), s.c_str(), true);
 	if (is_cta) {
-		timings_ext te(t, "DTD", s);
+		timings_ext te(t, name.c_str(), s);
 		cta.vec_vtdbs.push_back(te);
 
 		// Only use a T7VTDB if is cannot be expressed by a
@@ -1448,6 +1449,7 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 						unsigned sz, bool is_cta)
 {
 	struct timings t = {};
+	std::string name = is_cta ? std::string("VTDB ") + std::to_string(cta.vec_vtdbs.size() + 1) : "CVT";
 	std::string s("aspect ");
 
 	t.hact = 1 + (x[1] | (x[2] << 8));
@@ -1516,9 +1518,9 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 
 	edid_cvt_mode(refresh, t, rb_h_blank);
 
-	print_timings("    ", &t, "CVT", s.c_str());
+	print_timings("    ", &t, name.c_str(), s.c_str());
 	if (is_cta) {
-		timings_ext te(t, "CVT", s);
+		timings_ext te(t, name.c_str(), s);
 		cta.vec_vtdbs.push_back(te);
 	}
 }
