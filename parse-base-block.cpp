@@ -1414,16 +1414,18 @@ void edid_state::parse_base_block(const unsigned char *x)
 			fail("Digital Video Interface Standard set to reserved value 0x%02x.\n", x[0x14] & 0x7f);
 		}
 	} else {
+		static const char * const voltages[] = {
+			"0.700 : 0.300 : 1.000 V p-p",
+			"0.714 : 0.286 : 1.000 V p-p",
+			"1.000 : 0.400 : 1.400 V p-p",
+			"0.700 : 0.000 : 0.700 V p-p"
+		};
 		unsigned voltage = (x[0x14] & 0x60) >> 5;
 		unsigned sync = (x[0x14] & 0x0f);
 
 		analog = 1;
 		printf("    Analog display\n");
-		printf("    Input voltage level: %s V\n",
-		       voltage == 3 ? "0.7/0.7" :
-		       voltage == 2 ? "1.0/0.4" :
-		       voltage == 1 ? "0.714/0.286" :
-		       "0.7/0.3");
+		printf("    Signal Level Standard: %s\n", voltages[voltage]);
 
 		if (x[0x14] & 0x10)
 			printf("    Blank-to-black setup/pedestal\n");
