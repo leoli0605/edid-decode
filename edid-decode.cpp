@@ -626,7 +626,7 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 	}
 
 	if (t->ycbcr420 && t->pixclk_khz < 590000)
-		warn_once("Some YCbCr 4:2:0 timings are invalid for HDMI (which requires an RGB timings pixel rate >= 590 MHz).\n");
+		warn_once("Some YCbCr 4:2:0 timings are invalid for HDMI 2.1 (which requires an RGB timings pixel rate >= 590 MHz).\n");
 	if (t->hfp <= 0)
 		fail("0 or negative horizontal front porch.\n");
 	if (t->hbp <= 0)
