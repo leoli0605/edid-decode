@@ -145,7 +145,7 @@ static void usage(void)
 	       "  --dmt <dmt>           Show the timings for the DMT with the given DMT ID.\n"
 	       "  --vic <vic>           Show the timings for this VIC.\n"
 	       "  --hdmi-vic <hdmivic>  Show the timings for this HDMI VIC.\n"
-	       "  --cvt w=<width>,h=<height>,fps=<fps>[,rb=<rb>][,interlaced][,overscan][,alt][,hblank=<hblank][,vblank=<vblank][,early-vsync]\n"
+	       "  --cvt w=<width>,h=<height>,fps=<fps>[,rb=<rb>][,interlaced][,overscan][,alt][,hblank=<hblank>][,vblank=<vblank>][,early-vsync]\n"
 	       "                        Calculate the CVT timings for the given format.\n"
 	       "                        <fps> is frames per second for progressive timings,\n"
 	       "                        or fields per second for interlaced timings.\n"
