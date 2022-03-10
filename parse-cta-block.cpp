@@ -2169,6 +2169,11 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x700: cta_vcdb(x, length); break;
 	case 0x701|kOUI_HDR10: cta_hdr10plus(x, length); break;
 	case 0x701|kOUI_Dolby: cta_dolby_video(x, length); break;
+	// 0x701|kOUI_Apple: this almost certainly contains 'BLC Info/Corrections',
+	// since the data (spread out over two VSDBs) is very similar to what is seen
+	// in DisplayID blocks. Since I don't know how to parse this data, we still
+	// default to a hex dump, but I mention this here in case data on how to
+	// parse this becomes available.
 	case 0x702: cta_vesa_vdddb(x, length); break;
 	case 0x705: cta_colorimetry_block(x, length); break;
 	case 0x706: cta_hdr_static_metadata_block(x, length); break;

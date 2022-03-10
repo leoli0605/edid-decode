@@ -412,6 +412,7 @@ struct edid_state {
 	unsigned displayid_block(const unsigned version, const unsigned char *x, unsigned length);
 	void parse_displayid_block(const unsigned char *x);
 	void parse_displayid_vesa(const unsigned char *x);
+	void parse_displayid_apple(const unsigned char *x);
 	void parse_displayid_cta_data_block(const unsigned char *x);
 	void check_displayid_blocks();
 

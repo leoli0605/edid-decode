@@ -1574,6 +1574,27 @@ void edid_state::parse_displayid_vesa(const unsigned char *x)
 	}
 }
 
+// tag 0x7f, OUI 00-10-FA (Apple)
+
+void edid_state::parse_displayid_apple(const unsigned char *x)
+{
+	int length = x[2] - 3;
+
+	x += 6;
+
+	// Based on the very limited information I found here:
+	// https://opensource.apple.com/source/IOKitUser/IOKitUser-1445.40.1/graphics.subproj/IODisplayLib.c
+	switch (x[0]) {
+	case 1:
+		printf("    Type: BLC Info/Corrections, Version: %u\n", x[1]);
+		break;
+	default:
+		printf("    Type: %u, Version: %u\n", x[0], x[1]);
+		break;
+	}
+	hex_block("    ", x + 2, length - 2);
+}
+
 // tag 0x81
 
 void edid_state::parse_displayid_cta_data_block(const unsigned char *x)
@@ -1917,6 +1938,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 		   break;
 	}
 	case 0x7e|kOUI_VESA: parse_displayid_vesa(x); break;
+	case 0x7f|kOUI_Apple: parse_displayid_apple(x); break;
 	case 0x81: parse_displayid_cta_data_block(x); break;
 	default: hex_block("    ", x + 3 + (hasoui ? 3 : 0), (len > (hasoui ? 3 : 0)) ? len - (hasoui ? 3 : 0) : 0); break;
 	}
