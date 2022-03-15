@@ -88,8 +88,14 @@ HDMI VIC #: HDMI-specific Video Identification Code (see HDMI 2.1 standard). The
 is the actual HDMI VIC code.
 .TP
 DTD #: Detailed Timings Descriptor (see EDID standard). Also used for
-DisplayID Video Timing Modes Types I, II, VI and VII. The number denotes that
-this is the Nth DTD in the EDID.
+DisplayID Video Timing Modes Types I, II, VI, VII, VIII and X. The number denotes that
+this is the Nth DTD in the Base Block and CTA Extension Blocks.
+.TP
+VTDB #: 20-byte DTD or 6- or 7-byte CVT descriptor in a CTA Extension Block.
+The number denotes that this is the Nth such timing in the CTA Extension Blocks.
+.TP
+RID #@#: A CTA-861.6 Video Format Descriptor with the given Resolution ID (first
+number) at the given framerate (second number).
 .RE
 
 By default DTDs are shown in the long format while others are just shown in
