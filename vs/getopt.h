@@ -90,6 +90,9 @@ enum    		/* permitted values for its `has_arg' field...	*/
 
 extern int getopt_long( int, char * const [], const char *, const struct option *, int * );
 extern int getopt_long_only( int, char * const [], const char *, const struct option *, int * );
+
+extern int getsubopt(char** opt, char* const* keys, char** val);
+
 /*
  * Previous MinGW implementation had...
  */

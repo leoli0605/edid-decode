@@ -34,6 +34,15 @@
     <ClCompile Include="..\edid-decode.cpp">
       <Filter>edid-decode</Filter>
     </ClCompile>
+    <ClCompile Include="getsubopt.c">
+      <Filter>windows-unix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\calc-gtf-cvt.cpp">
+      <Filter>edid-decode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\calc-ovt.cpp">
+      <Filter>edid-decode</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\edid-decode.h">
@@ -44,6 +53,9 @@
     </ClInclude>
     <ClInclude Include="unistd.h">
       <Filter>windows-unix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\oui.h">
+      <Filter>edid-decode</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

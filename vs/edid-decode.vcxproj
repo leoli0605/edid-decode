@@ -21,13 +21,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -85,6 +85,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4244; 4018; 4267; 4996; 26451; 6385; 6001</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -94,6 +95,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\calc-gtf-cvt.cpp" />
+    <ClCompile Include="..\calc-ovt.cpp" />
     <ClCompile Include="getopt.c" />
     <ClCompile Include="..\edid-decode.cpp" />
     <ClCompile Include="..\parse-base-block.cpp" />
@@ -102,8 +105,10 @@
     <ClCompile Include="..\parse-displayid-block.cpp" />
     <ClCompile Include="..\parse-ls-ext-block.cpp" />
     <ClCompile Include="..\parse-vtb-ext-block.cpp" />
+    <ClCompile Include="getsubopt.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\oui.h" />
     <ClInclude Include="getopt.h" />
     <ClInclude Include="unistd.h" />
     <ClInclude Include="..\edid-decode.h" />
