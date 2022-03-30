@@ -2690,9 +2690,10 @@ void edid_state::parse_cta_block(const unsigned char *x)
 			}
 			detailed_block(detailed);
 		}
-		if (!memchk(detailed, x + 127 - detailed)) {
+		unused_bytes = x + 127 - detailed;
+		if (!memchk(detailed, unused_bytes)) {
 			data_block = "Padding";
-			fail("CTA-861 padding contains non-zero bytes.\n");
+			fail("Contains non-zero bytes.\n");
 		}
 	} while (0);
 

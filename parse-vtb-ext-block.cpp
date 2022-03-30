@@ -55,4 +55,9 @@ void edid_state::parse_vtb_ext_block(const unsigned char *x)
 			print_standard_timing("    ", x[0], x[1], true);
 		}
 	}
+	unused_bytes = y - x;
+	if (!memchk(x, unused_bytes)) {
+		data_block = "Padding";
+		fail("Contains non-zero bytes.\n");
+	}
 }

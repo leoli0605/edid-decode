@@ -234,7 +234,7 @@ static void show_msgs(bool is_warn)
 }
 
 
-void do_checksum(const char *prefix, const unsigned char *x, size_t len)
+void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes)
 {
 	unsigned char check = x[len - 1];
 	unsigned char sum = 0;
@@ -246,11 +246,13 @@ void do_checksum(const char *prefix, const unsigned char *x, size_t len)
 		sum += x[i];
 
 	if ((unsigned char)(check + sum) != 0) {
-		printf(" (should be 0x%02x)\n", -sum & 0xff);
+		printf(" (should be 0x%02x)", -sum & 0xff);
 		fail("Invalid checksum 0x%02x (should be 0x%02x).\n",
 		     check, -sum & 0xff);
-		return;
 	}
+	if (unused_bytes)
+		printf("  Unused space in Extension Block: %u byte%s",
+		       unused_bytes, unused_bytes > 1 ? "s" : "");
 	printf("\n");
 }
 
@@ -1270,6 +1272,7 @@ void edid_state::parse_extension(const unsigned char *x)
 {
 	block = block_name(x[0]);
 	data_block.clear();
+	unused_bytes = 0;
 
 	printf("\n");
 	if (block_nr && x[0] == 0)
@@ -1307,7 +1310,7 @@ void edid_state::parse_extension(const unsigned char *x)
 	}
 
 	data_block.clear();
-	do_checksum("", x, EDID_PAGE_SIZE);
+	do_checksum("", x, EDID_PAGE_SIZE, unused_bytes);
 }
 
 void edid_state::print_preferred_timings()

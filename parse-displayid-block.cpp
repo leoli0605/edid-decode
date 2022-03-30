@@ -2022,9 +2022,10 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 	data_block.clear();
 	do_checksum("  ", x + 1, x[2] + 5);
 
-	if (!memchk(x + 1 + x[2] + 5, 0x7f - (1 + x[2] + 5))) {
+	unused_bytes = 0x7f - (1 + x[2] + 5);
+	if (!memchk(x + 1 + x[2] + 5, unused_bytes)) {
 		data_block = "Padding";
-		fail("DisplayID padding contains non-zero bytes.\n");
+		fail("Contains non-zero bytes.\n");
 	}
 	dispid.is_base_block = false;
 }

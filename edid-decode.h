@@ -209,6 +209,7 @@ struct edid_state {
 	unsigned block_nr;
 	std::string block;
 	std::string data_block;
+	unsigned unused_bytes;
 	bool has_cta;
 	bool has_dispid;
 	bool hide_serial_numbers;
@@ -496,7 +497,7 @@ void msg(bool is_warn, const char *fmt, ...);
 
 #endif
 
-void do_checksum(const char *prefix, const unsigned char *x, size_t len);
+void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes = 0);
 std::string utohex(unsigned char x);
 std::string ouitohex(unsigned oui);
 std::string containerid2s(const unsigned char *x);
