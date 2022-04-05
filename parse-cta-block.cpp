@@ -2074,7 +2074,7 @@ static const char *colorimetry2_map[] = {
 	"ST2113RGB",
 };
 
-static void cta_colorimetry_block(const unsigned char *x, unsigned length)
+void edid_state::cta_colorimetry_block(const unsigned char *x, unsigned length)
 {
 	unsigned i;
 
@@ -2090,6 +2090,15 @@ static void cta_colorimetry_block(const unsigned char *x, unsigned length)
 	for (i = 0; i < ARRAY_SIZE(colorimetry2_map); i++)
 		if (x[1] & (1 << i))
 			printf("    %s\n", colorimetry2_map[i]);
+	// The sRGB bit (added in CTA-861.6) allows sources to explicitly
+	// signal sRGB colorimetry. Without this the default colorimetry
+	// of an RGB video is either sRGB or defaultRGB. It depends on the
+	// Source which is used, and the Sink has no idea what it is getting.
+	//
+	// For proper compatibility with PCs enabling sRGB support is
+	// desirable.
+	if (!base.uses_srgb && !(x[1] & 0x20))
+		warn("Set the sRGB colorimetry bit to avoid interop issues.\n");
 }
 
 static const char *eotf_map[] = {
@@ -2561,6 +2570,8 @@ void edid_state::preparse_cta_block(const unsigned char *x)
 		case 0x07:
 			if (x[i + 1] == 0x0d)
 				cta.has_vfpdb = true;
+			if (x[i + 1] == 0x05)
+				cta.has_cdb = true;
 			if (x[i + 1] == 0x13 && (x[i + 2] & 0x40)) {
 				cta.preparsed_speaker_count = 1 + (x[i + 2] & 0x1f);
 				cta.preparsed_sld = x[i + 2] & 0x20;
@@ -2709,6 +2720,8 @@ void edid_state::parse_cta_block(const unsigned char *x)
 		fail("HDMI VIC Codes must have their CTA-861 VIC equivalents in the VSB.\n");
 	if (!cta.has_vcdb)
 		fail("Missing VCDB, needed for Set Selectable RGB Quantization to avoid interop issues.\n");
+	if (!base.uses_srgb && !cta.has_cdb)
+		warn("Add a Colorimetry Data Block with the sRGB colorimetry bit set to avoid interop issues.\n");
 }
 
 void edid_state::cta_resolve_svr(vec_timings_ext::iterator iter)

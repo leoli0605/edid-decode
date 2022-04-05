@@ -1497,8 +1497,10 @@ void edid_state::parse_base_block(const unsigned char *x)
 			fail("sRGB is signaled, but the chromaticities do not match.\n");
 		if (x[0x17] != 120)
 			warn("sRGB is signaled, but the gamma != 2.2.\n");
+		base.uses_srgb = true;
 	} else if (!memcmp(x + 0x19, srgb_chromaticity, sizeof(srgb_chromaticity))) {
 		fail("The chromaticities match sRGB, but sRGB is not signaled.\n");
+		base.uses_srgb = true;
 	}
 
 	if (base.edid_minor >= 4) {

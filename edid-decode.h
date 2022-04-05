@@ -159,6 +159,7 @@ struct edid_state {
 		base.sec_gtf_start_freq = 0;
 		base.C = base.M = base.K = base.J = 0;
 		base.max_pos_neg_hor_freq_khz = 0;
+		base.uses_srgb = false;
 		base.detailed_block_cnt = base.dtd_cnt = 0;
 
 		base.min_display_hor_freq_hz = base.max_display_hor_freq_hz =
@@ -168,7 +169,7 @@ struct edid_state {
 
 		// CTA-861 block state
 		cta.has_vic_1 = cta.first_svd_might_be_preferred = cta.has_sldb =
-			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = false;
+			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = cta.has_cdb = false;
 		cta.previous_cta_tag = 0xfff;
 		cta.have_hf_vsdb = cta.have_hf_scdb = false;
 		cta.image_width = cta.image_height = 0;
@@ -244,6 +245,7 @@ struct edid_state {
 		double C, M, K, J;
 		bool supports_cvt;
 		bool has_spwg;
+		bool uses_srgb;
 		unsigned detailed_block_cnt;
 		unsigned dtd_cnt;
 		bool seen_non_detailed_descriptor;
@@ -283,6 +285,7 @@ struct edid_state {
 		bool has_hdmi;
 		bool has_vcdb;
 		bool has_vfpdb;
+		bool has_cdb;
 		unsigned preparsed_speaker_count;
 		bool preparsed_sld_has_coord;
 		bool preparsed_sld;
@@ -385,6 +388,7 @@ struct edid_state {
 	void cta_rcdb(const unsigned char *x, unsigned length);
 	void cta_sldb(const unsigned char *x, unsigned length);
 	void cta_preparse_sldb(const unsigned char *x, unsigned length);
+	void cta_colorimetry_block(const unsigned char *x, unsigned length);
 	void cta_hdmi_block(const unsigned char *x, unsigned length);
 	void cta_displayid_type_7(const unsigned char *x, unsigned length);
 	void cta_displayid_type_8(const unsigned char *x, unsigned length);
