@@ -979,6 +979,7 @@ void edid_state::detailed_timings(const char *prefix, const unsigned char *x,
 	switch ((flags & 0x18) >> 3) {
 	case 0x00:
 		s_flags = "analog composite";
+		[[clang::fallthrough]];
 		/* fall-through */
 	case 0x01:
 		if (s_flags.empty())

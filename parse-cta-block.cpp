@@ -2577,6 +2577,7 @@ void edid_state::preparse_cta_block(const unsigned char *x)
 			if (x[i + 1] != 0x0e)
 				continue;
 			for_ycbcr420 = true;
+			[[clang::fallthrough]];
 			/* fall-through */
 		case 0x02:
 			for (unsigned j = 1 + for_ycbcr420; j <= (x[i] & 0x1f); j++) {

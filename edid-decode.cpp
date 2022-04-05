@@ -77,6 +77,7 @@ enum Option {
 
 static char options[OptLast];
 
+#ifndef __EMSCRIPTEN__
 static struct option long_options[] = {
 	{ "help", no_argument, 0, OptHelp },
 	{ "output-format", required_argument, 0, OptOutputFormat },
@@ -192,6 +193,7 @@ static void usage(void)
 	       "  --list-rid-timings <rid> List all timings for RID <rid> or all known RIDs if <rid> is 0.\n"
 	       "  -h, --help            Display this help message.\n");
 }
+#endif
 
 static std::string s_msgs[EDID_MAX_BLOCKS + 1][2];
 
@@ -1026,122 +1028,6 @@ static bool extract_edid(int fd, FILE *error)
 	return true;
 }
 
-static unsigned char crc_calc(const unsigned char *b)
-{
-	unsigned char sum = 0;
-	unsigned i;
-
-	for (i = 0; i < 127; i++)
-		sum += b[i];
-	return 256 - sum;
-}
-
-static int crc_ok(const unsigned char *b)
-{
-	return crc_calc(b) == b[127];
-}
-
-static void hexdumpedid(FILE *f, const unsigned char *edid, unsigned size)
-{
-	unsigned b, i, j;
-
-	for (b = 0; b < size / 128; b++) {
-		const unsigned char *buf = edid + 128 * b;
-
-		if (b)
-			fprintf(f, "\n");
-		for (i = 0; i < 128; i += 0x10) {
-			fprintf(f, "%02x", buf[i]);
-			for (j = 1; j < 0x10; j++) {
-				fprintf(f, " %02x", buf[i + j]);
-			}
-			fprintf(f, "\n");
-		}
-		if (!crc_ok(buf))
-			fprintf(f, "Block %u has a checksum error (should be 0x%02x).\n",
-				b, crc_calc(buf));
-	}
-}
-
-static void carraydumpedid(FILE *f, const unsigned char *edid, unsigned size)
-{
-	unsigned b, i, j;
-
-	fprintf(f, "const unsigned char edid[] = {\n");
-	for (b = 0; b < size / 128; b++) {
-		const unsigned char *buf = edid + 128 * b;
-
-		if (b)
-			fprintf(f, "\n");
-		for (i = 0; i < 128; i += 8) {
-			fprintf(f, "\t0x%02x,", buf[i]);
-			for (j = 1; j < 8; j++) {
-				fprintf(f, " 0x%02x,", buf[i + j]);
-			}
-			fprintf(f, "\n");
-		}
-		if (!crc_ok(buf))
-			fprintf(f, "\t/* Block %u has a checksum error (should be 0x%02x). */\n",
-				b, crc_calc(buf));
-	}
-	fprintf(f, "};\n");
-}
-
-// This format can be read by the QuantumData EDID editor
-static void xmldumpedid(FILE *f, const unsigned char *edid, unsigned size)
-{
-	fprintf(f, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-	fprintf(f, "<DATAOBJ>\n");
-	fprintf(f, "    <HEADER TYPE=\"DID\" VERSION=\"1.0\"/>\n");
-	fprintf(f, "    <DATA>\n");
-	for (unsigned b = 0; b < size / 128; b++) {
-		const unsigned char *buf = edid + 128 * b;
-
-		fprintf(f, "        <BLOCK%u>", b);
-		for (unsigned i = 0; i < 128; i++)
-			fprintf(f, "%02X", buf[i]);
-		fprintf(f, "</BLOCK%u>\n", b);
-	}
-	fprintf(f, "    </DATA>\n");
-	fprintf(f, "</DATAOBJ>\n");
-}
-
-
-static int edid_to_file(const char *to_file, enum output_format out_fmt)
-{
-	FILE *out;
-
-	if (!strcmp(to_file, "-")) {
-		to_file = "stdout";
-		out = stdout;
-	} else if ((out = fopen(to_file, "w")) == NULL) {
-		perror(to_file);
-		return -1;
-	}
-	if (out_fmt == OUT_FMT_DEFAULT)
-		out_fmt = out == stdout ? OUT_FMT_HEX : OUT_FMT_RAW;
-
-	switch (out_fmt) {
-	default:
-	case OUT_FMT_HEX:
-		hexdumpedid(out, edid, state.edid_size);
-		break;
-	case OUT_FMT_RAW:
-		fwrite(edid, state.edid_size, 1, out);
-		break;
-	case OUT_FMT_CARRAY:
-		carraydumpedid(out, edid, state.edid_size);
-		break;
-	case OUT_FMT_XML:
-		xmldumpedid(out, edid, state.edid_size);
-		break;
-	}
-
-	if (out != stdout)
-		fclose(out);
-	return 0;
-}
-
 static int edid_from_file(const char *from_file, FILE *error)
 {
 #ifdef O_BINARY
@@ -1551,6 +1437,123 @@ int edid_state::parse_edid()
 	}
 	printf("\nEDID conformity: %s\n", failures ? "FAIL" : "PASS");
 	return failures ? -2 : 0;
+}
+
+#ifndef __EMSCRIPTEN__
+
+static unsigned char crc_calc(const unsigned char *b)
+{
+	unsigned char sum = 0;
+	unsigned i;
+
+	for (i = 0; i < 127; i++)
+		sum += b[i];
+	return 256 - sum;
+}
+
+static int crc_ok(const unsigned char *b)
+{
+	return crc_calc(b) == b[127];
+}
+
+static void hexdumpedid(FILE *f, const unsigned char *edid, unsigned size)
+{
+	unsigned b, i, j;
+
+	for (b = 0; b < size / 128; b++) {
+		const unsigned char *buf = edid + 128 * b;
+
+		if (b)
+			fprintf(f, "\n");
+		for (i = 0; i < 128; i += 0x10) {
+			fprintf(f, "%02x", buf[i]);
+			for (j = 1; j < 0x10; j++) {
+				fprintf(f, " %02x", buf[i + j]);
+			}
+			fprintf(f, "\n");
+		}
+		if (!crc_ok(buf))
+			fprintf(f, "Block %u has a checksum error (should be 0x%02x).\n",
+				b, crc_calc(buf));
+	}
+}
+
+static void carraydumpedid(FILE *f, const unsigned char *edid, unsigned size)
+{
+	unsigned b, i, j;
+
+	fprintf(f, "const unsigned char edid[] = {\n");
+	for (b = 0; b < size / 128; b++) {
+		const unsigned char *buf = edid + 128 * b;
+
+		if (b)
+			fprintf(f, "\n");
+		for (i = 0; i < 128; i += 8) {
+			fprintf(f, "\t0x%02x,", buf[i]);
+			for (j = 1; j < 8; j++) {
+				fprintf(f, " 0x%02x,", buf[i + j]);
+			}
+			fprintf(f, "\n");
+		}
+		if (!crc_ok(buf))
+			fprintf(f, "\t/* Block %u has a checksum error (should be 0x%02x). */\n",
+				b, crc_calc(buf));
+	}
+	fprintf(f, "};\n");
+}
+
+// This format can be read by the QuantumData EDID editor
+static void xmldumpedid(FILE *f, const unsigned char *edid, unsigned size)
+{
+	fprintf(f, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+	fprintf(f, "<DATAOBJ>\n");
+	fprintf(f, "    <HEADER TYPE=\"DID\" VERSION=\"1.0\"/>\n");
+	fprintf(f, "    <DATA>\n");
+	for (unsigned b = 0; b < size / 128; b++) {
+		const unsigned char *buf = edid + 128 * b;
+
+		fprintf(f, "        <BLOCK%u>", b);
+		for (unsigned i = 0; i < 128; i++)
+			fprintf(f, "%02X", buf[i]);
+		fprintf(f, "</BLOCK%u>\n", b);
+	}
+	fprintf(f, "    </DATA>\n");
+	fprintf(f, "</DATAOBJ>\n");
+}
+
+static int edid_to_file(const char *to_file, enum output_format out_fmt)
+{
+	FILE *out;
+
+	if (!strcmp(to_file, "-")) {
+		to_file = "stdout";
+		out = stdout;
+	} else if ((out = fopen(to_file, "w")) == NULL) {
+		perror(to_file);
+		return -1;
+	}
+	if (out_fmt == OUT_FMT_DEFAULT)
+		out_fmt = out == stdout ? OUT_FMT_HEX : OUT_FMT_RAW;
+
+	switch (out_fmt) {
+	default:
+	case OUT_FMT_HEX:
+		hexdumpedid(out, edid, state.edid_size);
+		break;
+	case OUT_FMT_RAW:
+		fwrite(edid, state.edid_size, 1, out);
+		break;
+	case OUT_FMT_CARRAY:
+		carraydumpedid(out, edid, state.edid_size);
+		break;
+	case OUT_FMT_XML:
+		xmldumpedid(out, edid, state.edid_size);
+		break;
+	}
+
+	if (out != stdout)
+		fclose(out);
+	return 0;
 }
 
 enum cvt_opts {
@@ -2122,7 +2125,8 @@ int main(int argc, char **argv)
 	return ret ? ret : state.parse_edid();
 }
 
-#ifdef __EMSCRIPTEN__
+#else
+
 /*
  * The surrounding JavaScript implementation will call this function
  * each time it wants to decode an EDID. So this should reset all the
@@ -2141,4 +2145,5 @@ extern "C" int parse_edid(const char *input)
 	int ret = edid_from_file(input, stderr);
 	return ret ? ret : state.parse_edid();
 }
+
 #endif
