@@ -1216,6 +1216,15 @@ void edid_state::print_preferred_timings()
 			print_timings("  ", *iter, true, false);
 	}
 
+	if (!cta.preferred_timings_vfpdb.empty()) {
+		printf("\n----------------\n");
+		printf("\nPreferred Video Timing%s if Block 0 and CTA-861 Blocks are parsed with VFPDB support:\n",
+		       cta.preferred_timings_vfpdb.size() > 1 ? "s" : "");
+		for (vec_timings_ext::iterator iter = cta.preferred_timings_vfpdb.begin();
+		     iter != cta.preferred_timings_vfpdb.end(); ++iter)
+			print_timings("  ", *iter, true, false);
+	}
+
 	if (!dispid.preferred_timings.empty()) {
 		printf("\n----------------\n");
 		printf("\nPreferred Video Timing%s if Block 0 and DisplayID Blocks are parsed:\n",
@@ -1230,7 +1239,7 @@ void edid_state::print_native_res()
 {
 	typedef std::pair<unsigned, unsigned> resolution;
 	typedef std::set<resolution> resolution_set;
-	resolution_set native_prog, native_int;
+	resolution_set native_prog, native_int, native_nvrdb;
 	unsigned native_width = 0, native_height = 0;
 	unsigned native_width_int = 0, native_height_int = 0;
 
@@ -1274,6 +1283,24 @@ void edid_state::print_native_res()
 			}
 		} else {
 			native_prog.insert(std::pair<unsigned, unsigned>(iter->t.hact, iter->t.vact));
+			if (!native_width) {
+				native_width = iter->t.hact;
+				native_height = iter->t.vact;
+				native_mismatch = true;
+			} else if (native_width &&
+				   (iter->t.hact != native_width ||
+				    iter->t.vact != native_height)) {
+				native_mismatch = true;
+			}
+		}
+	}
+
+	for (vec_timings_ext::iterator iter = cta.native_timing_nvrdb.begin();
+	     iter != cta.native_timing_nvrdb.end(); ++iter) {
+		if (iter->t.interlaced) {
+			fail("Interlaced native timing in NVRDB.\n");
+		} else {
+			native_nvrdb.insert(std::pair<unsigned, unsigned>(iter->t.hact, iter->t.vact));
 			if (!native_width) {
 				native_width = iter->t.hact;
 				native_height = iter->t.vact;
@@ -1357,6 +1384,14 @@ void edid_state::print_native_res()
 		for (resolution_set::iterator iter = native_int.begin();
 		     iter != native_int.end(); ++iter)
 			printf("  %ux%ui\n", iter->first, iter->second);
+	}
+
+	if (!cta.native_timing_nvrdb.empty()) {
+		printf("\n----------------\n");
+		printf("\nNative Video Resolution if Block 0 and CTA-861 Blocks are parsed with NVRDB support:\n");
+		for (resolution_set::iterator iter = native_nvrdb.begin();
+		     iter != native_nvrdb.end(); ++iter)
+			printf("  %ux%u\n", iter->first, iter->second);
 	}
 
 	if (dispid.native_width) {

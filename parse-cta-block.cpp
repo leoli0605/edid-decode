@@ -858,9 +858,9 @@ void edid_state::cta_vfpdb(const unsigned char *x, unsigned length)
 		fail("Empty Data Block with length %u.\n", length);
 		return;
 	}
-	cta.preferred_timings.clear();
+	cta.preferred_timings_vfpdb.clear();
 	for (i = 0; i < length; i++)
-		cta_print_svr(x[i], cta.preferred_timings);
+		cta_print_svr(x[i], cta.preferred_timings_vfpdb);
 }
 
 void edid_state::cta_nvrdb(const unsigned char *x, unsigned length)
@@ -872,8 +872,8 @@ void edid_state::cta_nvrdb(const unsigned char *x, unsigned length)
 
 	unsigned char flags = length == 1 ? 0 : x[1];
 
-	cta.native_timings.clear();
-	cta_print_svr(x[0], cta.native_timings);
+	cta.native_timing_nvrdb.clear();
+	cta_print_svr(x[0], cta.native_timing_nvrdb);
 	if ((flags & 1) && length < 6) {
 		fail("Data Block too short for Image Size (length = %u).\n", length);
 		return;
@@ -2570,19 +2570,20 @@ void edid_state::preparse_cta_block(const unsigned char *x)
 		case 0x07:
 			if (x[i + 1] == 0x0d)
 				cta.has_vfpdb = true;
-			if (x[i + 1] == 0x05)
+			else if (x[i + 1] == 0x05)
 				cta.has_cdb = true;
-			if (x[i + 1] == 0x13 && (x[i + 2] & 0x40)) {
+			else if (x[i + 1] == 0x08)
+				cta.has_nvrdb = true;
+			else if (x[i + 1] == 0x13 && (x[i + 2] & 0x40)) {
 				cta.preparsed_speaker_count = 1 + (x[i + 2] & 0x1f);
 				cta.preparsed_sld = x[i + 2] & 0x20;
-			}
-			if (x[i + 1] == 0x14)
+			} else if (x[i + 1] == 0x14)
 				cta_preparse_sldb(x + i + 2, (x[i] & 0x1f) - 1);
-			if (x[i + 1] == 0x22)
+			else if (x[i + 1] == 0x22)
 				cta.preparsed_total_vtdbs++;
-			if (x[i + 1] == 0x23)
+			else if (x[i + 1] == 0x23)
 				cta.preparsed_has_t8vtdb = true;
-			if (x[i + 1] == 0x2a)
+			else if (x[i + 1] == 0x2a)
 				cta.preparsed_total_vtdbs +=
 					((x[i] & 0x1f) - 2) / (6 + ((x[i + 2] & 0x70) >> 4));
 			if (x[i + 1] != 0x0e)
@@ -2724,38 +2725,47 @@ void edid_state::parse_cta_block(const unsigned char *x)
 		warn("Add a Colorimetry Data Block with the sRGB colorimetry bit set to avoid interop issues.\n");
 }
 
-void edid_state::cta_resolve_svr(vec_timings_ext::iterator iter)
+void edid_state::cta_resolve_svr(timings_ext &t_ext)
 {
-	if (iter->svr() == 254) {
-		iter->flags = cta.t8vtdb.flags;
-		iter->t = cta.t8vtdb.t;
-	} else if (iter->svr() <= 144) {
-		iter->flags = cta.vec_dtds[iter->svr() - 129].flags;
-		iter->t = cta.vec_dtds[iter->svr() - 129].t;
-	} else if (iter->svr() <= 160) {
-		iter->flags = cta.vec_vtdbs[iter->svr() - 145].flags;
-		iter->t = cta.vec_vtdbs[iter->svr() - 145].t;
-	} else if (iter->svr() <= 175) {
-		iter->flags.clear();
+	if (t_ext.svr() == 254) {
+		t_ext.flags = cta.t8vtdb.flags;
+		add_str(t_ext.flags, ">=CTA-861-H");
+		t_ext.t = cta.t8vtdb.t;
+	} else if (t_ext.svr() <= 144) {
+		t_ext.flags = cta.vec_dtds[t_ext.svr() - 129].flags;
+		t_ext.t = cta.vec_dtds[t_ext.svr() - 129].t;
+	} else if (t_ext.svr() <= 160) {
+		t_ext.flags = cta.vec_vtdbs[t_ext.svr() - 145].flags;
+		add_str(t_ext.flags, ">=CTA-861-H");
+		t_ext.t = cta.vec_vtdbs[t_ext.svr() - 145].t;
+	} else if (t_ext.svr() <= 175) {
+		t_ext.flags.clear();
 		unsigned char rid = cta.preparsed_first_vfd.rid;
-		iter->t = calc_ovt_mode(rids[rid].hact, rids[rid].vact,
+		t_ext.t = calc_ovt_mode(rids[rid].hact, rids[rid].vact,
 					rids[rid].hratio, rids[rid].vratio,
-					vf_rate_values[iter->svr() - 160]);
+					vf_rate_values[t_ext.svr() - 160]);
+		t_ext.flags = ">=CTA-861.6";
 	}
 }
 
 void edid_state::cta_resolve_svrs()
 {
-	for (vec_timings_ext::iterator iter = cta.preferred_timings.begin();
-	     iter != cta.preferred_timings.end(); ++iter) {
+	for (vec_timings_ext::iterator iter = cta.preferred_timings_vfpdb.begin();
+	     iter != cta.preferred_timings_vfpdb.end(); ++iter) {
 		if (iter->has_svr())
-			cta_resolve_svr(iter);
+			cta_resolve_svr(*iter);
 	}
 
 	for (vec_timings_ext::iterator iter = cta.native_timings.begin();
 	     iter != cta.native_timings.end(); ++iter) {
 		if (iter->has_svr())
-			cta_resolve_svr(iter);
+			cta_resolve_svr(*iter);
+	}
+
+	for (vec_timings_ext::iterator iter = cta.native_timing_nvrdb.begin();
+	     iter != cta.native_timing_nvrdb.end(); ++iter) {
+		if (iter->has_svr())
+			cta_resolve_svr(*iter);
 	}
 }
 
@@ -2782,6 +2792,21 @@ void edid_state::check_cta_blocks()
 			max_pref_prog_vact = iter->t.vact;
 		}
 	}
+	for (vec_timings_ext::iterator iter = cta.preferred_timings_vfpdb.begin();
+	     iter != cta.preferred_timings_vfpdb.end(); ++iter) {
+		if (iter->t.interlaced &&
+		    (iter->t.vact > max_pref_ilace_vact ||
+		     (iter->t.vact == max_pref_ilace_vact && iter->t.hact >= max_pref_ilace_hact))) {
+			max_pref_ilace_hact = iter->t.hact;
+			max_pref_ilace_vact = iter->t.vact;
+		}
+		if (!iter->t.interlaced &&
+		    (iter->t.vact > max_pref_prog_vact ||
+		     (iter->t.vact == max_pref_prog_vact && iter->t.hact >= max_pref_prog_hact))) {
+			max_pref_prog_hact = iter->t.hact;
+			max_pref_prog_vact = iter->t.vact;
+		}
+	}
 
 	unsigned native_prog = 0;
 	unsigned native_prog_hact = 0;
@@ -2791,6 +2816,8 @@ void edid_state::check_cta_blocks()
 	unsigned native_ilace_hact = 0;
 	unsigned native_ilace_vact = 0;
 	bool native_ilace_mixed_resolutions = false;
+	unsigned native_nvrdb_hact = 0;
+	unsigned native_nvrdb_vact = 0;
 
 	for (vec_timings_ext::iterator iter = cta.native_timings.begin();
 	     iter != cta.native_timings.end(); ++iter) {
@@ -2815,6 +2842,12 @@ void edid_state::check_cta_blocks()
 		}
 	}
 
+	for (vec_timings_ext::iterator iter = cta.native_timing_nvrdb.begin();
+	     iter != cta.native_timing_nvrdb.end(); ++iter) {
+			native_nvrdb_hact = iter->t.hact;
+			native_nvrdb_vact = iter->t.vact;
+	}
+
 	if (native_prog_mixed_resolutions)
 		fail("Native progressive timings are a mix of several resolutions.\n");
 	if (native_ilace_mixed_resolutions)
@@ -2826,7 +2859,13 @@ void edid_state::check_cta_blocks()
 	if (!native_ilace_mixed_resolutions && native_ilace > 1)
 		warn("Multiple native interlaced timings are defined.\n");
 
-	if (!native_prog_mixed_resolutions && native_prog_vact &&
+	if (native_nvrdb_vact &&
+	    (max_pref_prog_vact > native_nvrdb_vact ||
+	     (max_pref_prog_vact == native_nvrdb_vact && max_pref_prog_hact > native_nvrdb_hact)))
+		warn("Native video resolution of %ux%u is smaller than the max preferred progressive resolution %ux%u.\n",
+		     native_nvrdb_hact, native_nvrdb_vact,
+		     max_pref_prog_hact, max_pref_prog_vact);
+	else if (!native_nvrdb_vact && !native_prog_mixed_resolutions && native_prog_vact &&
 	    (max_pref_prog_vact > native_prog_vact ||
 	     (max_pref_prog_vact == native_prog_vact && max_pref_prog_hact > native_prog_hact)))
 		warn("Native progressive resolution of %ux%u is smaller than the max preferred progressive resolution %ux%u.\n",

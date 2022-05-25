@@ -169,7 +169,8 @@ struct edid_state {
 
 		// CTA-861 block state
 		cta.has_vic_1 = cta.first_svd_might_be_preferred = cta.has_sldb =
-			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = cta.has_cdb = false;
+			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = cta.has_cdb =
+			cta.has_nvrdb = false;
 		cta.previous_cta_tag = 0xfff;
 		cta.have_hf_vsdb = cta.have_hf_scdb = false;
 		cta.image_width = cta.image_height = 0;
@@ -271,12 +272,14 @@ struct edid_state {
 		vec_timings_ext vec_vtdbs;
 		cta_vfd preparsed_first_vfd;
 		vec_timings_ext preferred_timings;
+		vec_timings_ext preferred_timings_vfpdb;
 		bool preparsed_has_t8vtdb;
 		// Keep track of the found Tag/Extended Tag pairs.
 		// The unsigned value is equal to: (tag) | (OUI enum << 12) or (extended tag) | (tag << 8) | (OUI enum << 12)
 		std::vector<unsigned> found_tags;
 		timings_ext t8vtdb;
 		vec_timings_ext native_timings;
+		vec_timings_ext native_timing_nvrdb;
 		// in 0.1 mm units
 		unsigned image_width, image_height;
 		bool has_vic_1;
@@ -285,6 +288,7 @@ struct edid_state {
 		bool has_hdmi;
 		bool has_vcdb;
 		bool has_vfpdb;
+		bool has_nvrdb;
 		bool has_cdb;
 		unsigned preparsed_speaker_count;
 		bool preparsed_sld_has_coord;
@@ -396,7 +400,7 @@ struct edid_state {
 	void cta_block(const unsigned char *x, std::vector<unsigned> &found_tags);
 	void preparse_cta_block(const unsigned char *x);
 	void parse_cta_block(const unsigned char *x);
-	void cta_resolve_svr(vec_timings_ext::iterator iter);
+	void cta_resolve_svr(timings_ext &t_ext);
 	void cta_resolve_svrs();
 	void check_cta_blocks();
 	void cta_list_vics();
