@@ -714,13 +714,13 @@ void edid_state::cta_vfdb(const unsigned char *x, unsigned n)
 							 rids[vfd.rid].vact,
 							 rids[vfd.rid].hratio,
 							 rids[vfd.rid].vratio,
-							 vf_rate_values[i]);
+							 vf_rate_values[rate_index]);
 			char type[16];
 			sprintf(type, "RID %u@%up", rid, vf_rate_values[rate_index]);
 			print_timings("    ", &t, type);
-			if (rid_to_vic(vfd.rid, i))
+			if (rid_to_vic(vfd.rid, rate_index))
 				fail("%s not allowed since it maps to VIC %u.\n",
-				     rid_to_vic(vfd.rid, i));
+				     type, rid_to_vic(vfd.rid, rate_index));
 		}
 	}
 }
@@ -2565,7 +2565,7 @@ void edid_state::preparse_cta_block(const unsigned char *x)
 		case 0x06:
 			if (!(x[i] & 0x1f) || cta.preparsed_first_vfd.rid)
 				break;
-			cta.preparsed_first_vfd = cta_parse_vfd(x + 2, (x[i + 1] & 3) + 1);
+			cta.preparsed_first_vfd = cta_parse_vfd(x + i + 2, (x[i + 1] & 3) + 1);
 			break;
 		case 0x07:
 			if (x[i + 1] == 0x0d)
