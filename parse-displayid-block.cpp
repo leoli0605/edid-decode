@@ -1050,11 +1050,15 @@ void edid_state::parse_displayid_tiled_display_topology(const unsigned char *x, 
 		       x[0x10], x[0x11], x[0x12]);
 	printf("    Tiled Display Product ID Code: %u\n",
 	       x[0x13] | (x[0x14] << 8));
-	if (hide_serial_numbers)
-		printf("    Tiled Display Serial Number: ...\n");
-	else
-		printf("    Tiled Display Serial Number: %u\n",
-		       x[0x15] | (x[0x16] << 8) | (x[0x17] << 16)| (x[0x18] << 24));
+	unsigned int sn = x[0x15] | (x[0x16] << 8) | (x[0x17] << 16)| (x[0x18] << 24);
+	if (sn) {
+		if (hide_serial_numbers)
+			printf("    Tiled Display Serial Number: ...\n");
+		else
+			printf("    Tiled Display Serial Number: %u\n", sn);
+	} else {
+		fail("Tiled Display Serial Number must be non-zero.\n");
+	}
 }
 
 // tag 0x13
@@ -1678,7 +1682,7 @@ std::string edid_state::product_type(unsigned char x, bool heading)
 	return std::string("Unknown " + headingstr + " (") + utohex(x) + ")";
 }
 
-void edid_state::preparse_displayid_block(const unsigned char *x)
+void edid_state::preparse_displayid_block(unsigned char *x)
 {
 	unsigned length = x[2];
 
@@ -1693,6 +1697,32 @@ void edid_state::preparse_displayid_block(const unsigned char *x)
 		unsigned len = x[offset + 2];
 
 		switch (tag) {
+		case 0x00:
+		case 0x20:
+			if (replace_serial_numbers &&
+			    (x[offset + 0x08] || x[offset + 0x09] ||
+			     x[offset + 0x0a] || x[offset + 0x0b])) {
+				// Replace by 123456
+				x[offset + 0x08] = 0x40;
+				x[offset + 0x09] = 0xe2;
+				x[offset + 0x0a] = 0x01;
+				x[offset + 0x0b] = 0x00;
+				replace_checksum(x + 1, x[2] + 5);
+			}
+			break;
+		case 0x12:
+		case 0x28:
+			if (replace_serial_numbers &&
+			    (x[offset + 0x15] || x[offset + 0x16] ||
+			     x[offset + 0x17] || x[offset + 0x18])) {
+				// Replace by 123456
+				x[offset + 0x15] = 0x40;
+				x[offset + 0x16] = 0xe2;
+				x[offset + 0x17] = 0x01;
+				x[offset + 0x18] = 0x00;
+				replace_checksum(x + 1, x[2] + 5);
+			}
+			break;
 		case 0x02:
 			dispid.preparsed_color_ids |= 1 << ((x[offset + 1] >> 3) & 0x0f);
 			break;

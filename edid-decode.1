@@ -251,9 +251,18 @@ in the git repository, even if nothing else changed in the edid-decode output.
 Use this option to avoid including the SHA in the edid-decode output.
 .TP
 \fB\-\-hide\-serial\-numbers\fR
-Replace any serial numbers in the human readable output by '...'.
+Hide any serial numbers in the human readable output by '...'.
 Note that they are still easily extracted from the EDID hex dump at
 the start.
+.TP
+\fB\-\-replace\-serial\-numbers\fR
+Replaces any serial numbers in the EDID by '123456'. This will
+also update any checksums in the EDID and update the EDID hex dump at
+the start of the output. Note that since this will update checksums, any
+checksum errors present in the original EDID will no longer be detected.
+
+Serial numbers appear in the Base Block, DisplayID Extension Blocks and
+Localized String Extension Blocks.
 .TP
 \fB\-\-version\fR
 Show the SHA hash and the last commit date.

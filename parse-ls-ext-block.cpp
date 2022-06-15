@@ -15,6 +15,9 @@ static void parse_string(const char *name, const unsigned char *x)
 	hex_block("", x + 1, *x, true, *x);
 }
 
+// Note that support for UTF 16BE and 32BE is missing.
+// I have never seen LS-EXT support in real EDIDs, so that
+// shouldn't be a problem.
 void edid_state::parse_string_table(const unsigned char *x)
 {
 	printf("  UTF Type: ");
@@ -50,6 +53,26 @@ void edid_state::parse_string_table(const unsigned char *x)
 		printf("  Serial Number: ...\n");
 	else
 		parse_string("Serial Number", x);
+}
+
+void edid_state::preparse_ls_ext_block(unsigned char *x)
+{
+	unsigned char *orig = x;
+
+	if (!replace_serial_numbers)
+		return;
+
+	x += 5;
+
+	while (x[0] && x + x[0] < orig + 127) {
+		unsigned char *s = x + 6;
+
+		s += s[0] + 1;
+		s += s[0] + 1;
+		for (unsigned i = 1; i <= s[0]; i++)
+			s[i] = i <= 6 ? '0' + i : ' ';
+		x += x[0];
+	}
 }
 
 void edid_state::parse_ls_ext_block(const unsigned char *x)

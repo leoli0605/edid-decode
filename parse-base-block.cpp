@@ -1089,31 +1089,43 @@ void edid_state::detailed_timings(const char *prefix, const unsigned char *x,
 	}
 }
 
-void edid_state::preparse_detailed_block(const unsigned char *x)
+void edid_state::preparse_detailed_block(unsigned char *x)
 {
 	if (x[0] || x[1])
 		return;
-	if (x[3] != 0xfd)
-		return;
 
-	switch (x[10]) {
-	case 0x00: /* default gtf */
-		base.supports_gtf = true;
-		break;
-	case 0x02: /* secondary gtf curve */
-		base.supports_gtf = true;
-		base.supports_sec_gtf = !memchk(x + 12, 6);
-		base.sec_gtf_start_freq = x[12] * 2;
-		base.C = x[13] / 2.0;
-		base.M = (x[15] << 8) | x[14];
-		base.K = x[16];
-		base.J = x[17] / 2.0;
-		break;
-	case 0x04: /* cvt */
-		if (base.edid_minor >= 4) {
-			/* GTF is implied if CVT is signaled */
+	switch (x[3]) {
+	case 0xfd:
+		switch (x[10]) {
+		case 0x00: /* default gtf */
 			base.supports_gtf = true;
-			base.supports_cvt = true;
+			break;
+		case 0x02: /* secondary gtf curve */
+			base.supports_gtf = true;
+			base.supports_sec_gtf = !memchk(x + 12, 6);
+			base.sec_gtf_start_freq = x[12] * 2;
+			base.C = x[13] / 2.0;
+			base.M = (x[15] << 8) | x[14];
+			base.K = x[16];
+			base.J = x[17] / 2.0;
+			break;
+		case 0x04: /* cvt */
+			if (base.edid_minor >= 4) {
+				/* GTF is implied if CVT is signaled */
+				base.supports_gtf = true;
+				base.supports_cvt = true;
+			}
+			break;
+		}
+		break;
+	case 0xff:
+		if (replace_serial_numbers) {
+			// Replace with 123456
+			static const unsigned char sernum[13] = {
+				'1', '2', '3', '4', '5', '6',
+				'\n', ' ', ' ', ' ', ' ', ' ', ' '
+			};
+			memcpy(x + 5, sernum, sizeof(sernum));
 		}
 		break;
 	}
@@ -1316,6 +1328,28 @@ static const unsigned char srgb_chromaticity[10] = {
 	0xee, 0x91, 0xa3, 0x54, 0x4c, 0x99, 0x26, 0x0f, 0x50, 0x54
 };
 
+void edid_state::preparse_base_block(unsigned char *x)
+{
+	base.has_serial_number = x[0x0c] || x[0x0d] || x[0x0e] || x[0x0f];
+
+	if (base.has_serial_number && replace_serial_numbers) {
+		// Replace by 123456
+		x[0x0c] = 0x40;
+		x[0x0d] = 0xe2;
+		x[0x0e] = 0x01;
+		x[0x0f] = 0x00;
+	}
+
+	/*
+	 * Need to find the Display Range Limit info before reading
+	 * the standard timings.
+	 */
+	preparse_detailed_block(x + 0x36);
+	preparse_detailed_block(x + 0x48);
+	preparse_detailed_block(x + 0x5a);
+	preparse_detailed_block(x + 0x6c);
+}
+
 void edid_state::parse_base_block(const unsigned char *x)
 {
 	time_t the_time;
@@ -1341,7 +1375,6 @@ void edid_state::parse_base_block(const unsigned char *x)
 	printf("    Manufacturer: %s\n    Model: %u\n",
 	       manufacturer_name(x + 0x08),
 	       (unsigned short)(x[0x0a] + (x[0x0b] << 8)));
-	base.has_serial_number = x[0x0c] || x[0x0d] || x[0x0e] || x[0x0f];
 	if (base.has_serial_number) {
 		if (hide_serial_numbers)
 			printf("    Serial Number: ...\n");
@@ -1575,15 +1608,6 @@ void edid_state::parse_base_block(const unsigned char *x)
 		printf("  %s: none\n", data_block.c_str());
 	}
 	base.has_640x480p60_est_timing = x[0x23] & 0x20;
-
-	/*
-	 * Need to find the Display Range Limit info before reading
-	 * the standard timings.
-	 */
-	preparse_detailed_block(x + 0x36);
-	preparse_detailed_block(x + 0x48);
-	preparse_detailed_block(x + 0x5a);
-	preparse_detailed_block(x + 0x6c);
 
 	data_block = "Standard Timings";
 	bool found = false;

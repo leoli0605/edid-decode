@@ -145,6 +145,7 @@ struct edid_state {
 		warnings = failures = 0;
 		has_cta = has_dispid = false;
 		hide_serial_numbers = false;
+		replace_serial_numbers = false;
 		image_width = image_height = diagonal = 0;
 
 		// Base block state
@@ -215,6 +216,7 @@ struct edid_state {
 	bool has_cta;
 	bool has_dispid;
 	bool hide_serial_numbers;
+	bool replace_serial_numbers;
 
 	unsigned min_hor_freq_hz;
 	unsigned max_hor_freq_hz;
@@ -369,7 +371,8 @@ struct edid_state {
 	void detailed_epi(const unsigned char *x);
 	void detailed_timings(const char *prefix, const unsigned char *x,
 			      bool base_or_cta = true);
-	void preparse_detailed_block(const unsigned char *x);
+	void preparse_detailed_block(unsigned char *x);
+	void preparse_base_block(unsigned char *x);
 	void detailed_block(const unsigned char *x);
 	void parse_base_block(const unsigned char *x);
 	void check_base_block();
@@ -398,7 +401,7 @@ struct edid_state {
 	void cta_displayid_type_8(const unsigned char *x, unsigned length);
 	void cta_displayid_type_10(const unsigned char *x, unsigned length);
 	void cta_block(const unsigned char *x, std::vector<unsigned> &found_tags);
-	void preparse_cta_block(const unsigned char *x);
+	void preparse_cta_block(unsigned char *x);
 	void parse_cta_block(const unsigned char *x);
 	void cta_resolve_svr(timings_ext &t_ext);
 	void cta_resolve_svrs();
@@ -445,7 +448,7 @@ struct edid_state {
 	void parse_displayid_adaptive_sync(const unsigned char *x);
 	void parse_displayid_type_10_timing(const unsigned char *x, unsigned sz,
 					    bool is_cta = false);
-	void preparse_displayid_block(const unsigned char *x);
+	void preparse_displayid_block(unsigned char *x);
 	unsigned displayid_block(const unsigned version, const unsigned char *x, unsigned length);
 	void parse_displayid_block(const unsigned char *x);
 	void parse_displayid_vesa(const unsigned char *x);
@@ -456,11 +459,12 @@ struct edid_state {
 	void parse_vtb_ext_block(const unsigned char *x);
 
 	void parse_string_table(const unsigned char *x);
+	void preparse_ls_ext_block(unsigned char *x);
 	void parse_ls_ext_block(const unsigned char *x);
 
 	void parse_block_map(const unsigned char *x);
 
-	void preparse_extension(const unsigned char *x);
+	void preparse_extension(unsigned char *x);
 	void parse_extension(const unsigned char *x);
 	void print_preferred_timings();
 	void print_native_res();
@@ -505,7 +509,6 @@ void msg(bool is_warn, const char *fmt, ...);
 
 #endif
 
-void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes = 0);
 std::string utohex(unsigned char x);
 std::string ouitohex(unsigned oui);
 std::string containerid2s(const unsigned char *x);
@@ -513,6 +516,8 @@ bool memchk(const unsigned char *x, unsigned len, unsigned char v = 0);
 void hex_block(const char *prefix, const unsigned char *x, unsigned length,
 	       bool show_ascii = true, unsigned step = 16);
 std::string block_name(unsigned char block);
+void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes = 0);
+void replace_checksum(unsigned char *x, size_t len);
 void calc_ratio(struct timings *t);
 const char *oui_name(unsigned oui, unsigned *ouinum = NULL);
 unsigned gcd(unsigned a, unsigned b);

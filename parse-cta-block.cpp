@@ -2531,7 +2531,7 @@ dodefault:
 	found_tags.push_back(tag);
 }
 
-void edid_state::preparse_cta_block(const unsigned char *x)
+void edid_state::preparse_cta_block(unsigned char *x)
 {
 	unsigned version = x[1];
 	unsigned offset = x[2];

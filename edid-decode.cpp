@@ -57,6 +57,7 @@ enum Option {
 	OptXModeLineTimings = 'X',
 	OptSkipSHA = 128,
 	OptHideSerialNumbers,
+	OptReplaceSerialNumbers,
 	OptVersion,
 	OptDiag,
 	OptSTD,
@@ -88,6 +89,7 @@ static struct option long_options[] = {
 	{ "only-hex-dump", no_argument, 0, OptOnlyHexDump },
 	{ "skip-sha", no_argument, 0, OptSkipSHA },
 	{ "hide-serial-numbers", no_argument, 0, OptHideSerialNumbers },
+	{ "replace-serial-numbers", no_argument, 0, OptReplaceSerialNumbers },
 	{ "version", no_argument, 0, OptVersion },
 	{ "check-inline", no_argument, 0, OptCheckInline },
 	{ "check", no_argument, 0, OptCheck },
@@ -145,7 +147,8 @@ static void usage(void)
 	       "  -s, --skip-hex-dump   Skip the initial hex dump of the EDID.\n"
 	       "  -H, --only-hex-dump   Only output the hex dump of the EDID.\n"
 	       "  --skip-sha            Skip the SHA report.\n"
-	       "  --hide-serial-numbers Replace serial numbers with '...'.\n"
+	       "  --hide-serial-numbers Hide serial numbers with '...'.\n"
+	       "  --replace-serial-numbers Replace serial numbers in EDID with 123456.\n"
 	       "  --version             Show the edid-decode version (SHA).\n"
 	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"
@@ -236,17 +239,26 @@ static void show_msgs(bool is_warn)
 }
 
 
+void replace_checksum(unsigned char *x, size_t len)
+{
+	unsigned char sum = 0;
+	unsigned i;
+
+	for (i = 0; i < len - 1; i++)
+		sum += x[i];
+	x[len - 1] = -sum & 0xff;
+}
+
 void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes)
 {
 	unsigned char check = x[len - 1];
 	unsigned char sum = 0;
 	unsigned i;
 
-	printf("%sChecksum: 0x%02hhx", prefix, check);
-
-	for (i = 0; i < len-1; i++)
+	for (i = 0; i < len - 1; i++)
 		sum += x[i];
 
+	printf("%sChecksum: 0x%02hhx", prefix, check);
 	if ((unsigned char)(check + sum) != 0) {
 		printf(" (should be 0x%02x)", -sum & 0xff);
 		fail("Invalid checksum 0x%02x (should be 0x%02x).\n",
@@ -1140,16 +1152,23 @@ void edid_state::parse_block_map(const unsigned char *x)
 	}
 }
 
-void edid_state::preparse_extension(const unsigned char *x)
+void edid_state::preparse_extension(unsigned char *x)
 {
 	switch (x[0]) {
 	case 0x02:
 		has_cta = true;
 		preparse_cta_block(x);
 		break;
+	case 0x50:
+		preparse_ls_ext_block(x);
+		if (replace_serial_numbers)
+			replace_checksum(x, EDID_PAGE_SIZE);
+		break;
 	case 0x70:
 		has_dispid = true;
 		preparse_displayid_block(x);
+		if (replace_serial_numbers)
+			replace_checksum(x, EDID_PAGE_SIZE);
 		break;
 	}
 }
@@ -1404,6 +1423,11 @@ void edid_state::print_native_res()
 int edid_state::parse_edid()
 {
 	hide_serial_numbers = options[OptHideSerialNumbers];
+	replace_serial_numbers = options[OptReplaceSerialNumbers];
+
+	preparse_base_block(edid);
+	if (replace_serial_numbers)
+		replace_checksum(edid, EDID_PAGE_SIZE);
 
 	for (unsigned i = 1; i < num_blocks; i++)
 		preparse_extension(edid + i * EDID_PAGE_SIZE);
@@ -2128,11 +2152,7 @@ int main(int argc, char **argv)
 	if (options[OptGTF]) {
 		timings t;
 
-		// Find the Secondary Curve
-		state.preparse_detailed_block(edid + 0x36);
-		state.preparse_detailed_block(edid + 0x48);
-		state.preparse_detailed_block(edid + 0x5a);
-		state.preparse_detailed_block(edid + 0x6c);
+		state.preparse_base_block(edid);
 
 		t = state.calc_gtf_mode(gtf_data.w, gtf_data.h, gtf_data.freq,
 					gtf_data.interlaced, gtf_data.ip_parm,
