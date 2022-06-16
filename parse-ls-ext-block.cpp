@@ -64,7 +64,7 @@ void edid_state::preparse_ls_ext_block(unsigned char *x)
 {
 	unsigned char *orig = x;
 
-	if (!replace_serial_numbers)
+	if (!replace_unique_ids)
 		return;
 
 	x += 5;
@@ -86,6 +86,7 @@ void edid_state::preparse_ls_ext_block(unsigned char *x)
 			s[i + width - 1] = idx < 6 ? '1' + idx : ' ';
 		}
 	}
+	replace_checksum(orig, EDID_PAGE_SIZE);
 }
 
 void edid_state::parse_ls_ext_block(const unsigned char *x)

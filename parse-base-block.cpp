@@ -1089,10 +1089,10 @@ void edid_state::detailed_timings(const char *prefix, const unsigned char *x,
 	}
 }
 
-void edid_state::preparse_detailed_block(unsigned char *x)
+bool edid_state::preparse_detailed_block(unsigned char *x)
 {
 	if (x[0] || x[1])
-		return;
+		return false;
 
 	switch (x[3]) {
 	case 0xfd:
@@ -1119,16 +1119,18 @@ void edid_state::preparse_detailed_block(unsigned char *x)
 		}
 		break;
 	case 0xff:
-		if (replace_serial_numbers) {
+		if (replace_unique_ids) {
 			// Replace with 123456
 			static const unsigned char sernum[13] = {
 				'1', '2', '3', '4', '5', '6',
 				'\n', ' ', ' ', ' ', ' ', ' ', ' '
 			};
 			memcpy(x + 5, sernum, sizeof(sernum));
+			return true;
 		}
 		break;
 	}
+	return false;
 }
 
 void edid_state::detailed_block(const unsigned char *x)
@@ -1330,24 +1332,30 @@ static const unsigned char srgb_chromaticity[10] = {
 
 void edid_state::preparse_base_block(unsigned char *x)
 {
+	bool update_checksum = false;
+
 	base.has_serial_number = x[0x0c] || x[0x0d] || x[0x0e] || x[0x0f];
 
-	if (base.has_serial_number && replace_serial_numbers) {
+	if (base.has_serial_number && replace_unique_ids) {
 		// Replace by 123456
 		x[0x0c] = 0x40;
 		x[0x0d] = 0xe2;
 		x[0x0e] = 0x01;
 		x[0x0f] = 0x00;
+		update_checksum = true;
 	}
 
 	/*
 	 * Need to find the Display Range Limit info before reading
 	 * the standard timings.
 	 */
-	preparse_detailed_block(x + 0x36);
-	preparse_detailed_block(x + 0x48);
-	preparse_detailed_block(x + 0x5a);
-	preparse_detailed_block(x + 0x6c);
+	update_checksum |= preparse_detailed_block(x + 0x36);
+	update_checksum |= preparse_detailed_block(x + 0x48);
+	update_checksum |= preparse_detailed_block(x + 0x5a);
+	update_checksum |= preparse_detailed_block(x + 0x6c);
+
+	if (update_checksum)
+		replace_checksum(x, EDID_PAGE_SIZE);
 }
 
 void edid_state::parse_base_block(const unsigned char *x)

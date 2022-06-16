@@ -57,7 +57,7 @@ enum Option {
 	OptXModeLineTimings = 'X',
 	OptSkipSHA = 128,
 	OptHideSerialNumbers,
-	OptReplaceSerialNumbers,
+	OptReplaceUniqueIDs,
 	OptVersion,
 	OptDiag,
 	OptSTD,
@@ -89,7 +89,7 @@ static struct option long_options[] = {
 	{ "only-hex-dump", no_argument, 0, OptOnlyHexDump },
 	{ "skip-sha", no_argument, 0, OptSkipSHA },
 	{ "hide-serial-numbers", no_argument, 0, OptHideSerialNumbers },
-	{ "replace-serial-numbers", no_argument, 0, OptReplaceSerialNumbers },
+	{ "replace-unique-ids", no_argument, 0, OptReplaceUniqueIDs },
 	{ "version", no_argument, 0, OptVersion },
 	{ "check-inline", no_argument, 0, OptCheckInline },
 	{ "check", no_argument, 0, OptCheck },
@@ -148,7 +148,7 @@ static void usage(void)
 	       "  -H, --only-hex-dump   Only output the hex dump of the EDID.\n"
 	       "  --skip-sha            Skip the SHA report.\n"
 	       "  --hide-serial-numbers Hide serial numbers with '...'.\n"
-	       "  --replace-serial-numbers Replace serial numbers in EDID with 123456.\n"
+	       "  --replace-unique-ids  Replace unique IDs (serial numbers, Container IDs) with fixed values.\n"
 	       "  --version             Show the edid-decode version (SHA).\n"
 	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"
@@ -1161,14 +1161,10 @@ void edid_state::preparse_extension(unsigned char *x)
 		break;
 	case 0x50:
 		preparse_ls_ext_block(x);
-		if (replace_serial_numbers)
-			replace_checksum(x, EDID_PAGE_SIZE);
 		break;
 	case 0x70:
 		has_dispid = true;
 		preparse_displayid_block(x);
-		if (replace_serial_numbers)
-			replace_checksum(x, EDID_PAGE_SIZE);
 		break;
 	}
 }
@@ -1423,10 +1419,10 @@ void edid_state::print_native_res()
 int edid_state::parse_edid()
 {
 	hide_serial_numbers = options[OptHideSerialNumbers];
-	replace_serial_numbers = options[OptReplaceSerialNumbers];
+	replace_unique_ids = options[OptReplaceUniqueIDs];
 
 	preparse_base_block(edid);
-	if (replace_serial_numbers)
+	if (replace_unique_ids)
 		replace_checksum(edid, EDID_PAGE_SIZE);
 
 	for (unsigned i = 1; i < num_blocks; i++)

@@ -1684,12 +1684,12 @@ std::string edid_state::product_type(unsigned char x, bool heading)
 
 void edid_state::preparse_displayid_block(unsigned char *x)
 {
+	bool update_checksum = false;
 	unsigned length = x[2];
+	unsigned offset = 5;
 
 	if (length > 121)
 		length = 121;
-
-	unsigned offset = 5;
 
 	dispid.preparsed_displayid_blocks++;
 	while (length > 0) {
@@ -1699,7 +1699,7 @@ void edid_state::preparse_displayid_block(unsigned char *x)
 		switch (tag) {
 		case 0x00:
 		case 0x20:
-			if (replace_serial_numbers &&
+			if (replace_unique_ids &&
 			    (x[offset + 0x08] || x[offset + 0x09] ||
 			     x[offset + 0x0a] || x[offset + 0x0b])) {
 				// Replace by 123456
@@ -1707,12 +1707,12 @@ void edid_state::preparse_displayid_block(unsigned char *x)
 				x[offset + 0x09] = 0xe2;
 				x[offset + 0x0a] = 0x01;
 				x[offset + 0x0b] = 0x00;
-				replace_checksum(x + 1, x[2] + 5);
+				update_checksum = true;
 			}
 			break;
 		case 0x12:
 		case 0x28:
-			if (replace_serial_numbers &&
+			if (replace_unique_ids &&
 			    (x[offset + 0x15] || x[offset + 0x16] ||
 			     x[offset + 0x17] || x[offset + 0x18])) {
 				// Replace by 123456
@@ -1720,7 +1720,13 @@ void edid_state::preparse_displayid_block(unsigned char *x)
 				x[offset + 0x16] = 0xe2;
 				x[offset + 0x17] = 0x01;
 				x[offset + 0x18] = 0x00;
-				replace_checksum(x + 1, x[2] + 5);
+				update_checksum = true;
+			}
+			break;
+		case 0x29:
+			if (replace_unique_ids) {
+				update_checksum = true;
+				memset(x + offset + 3, 0, 16);
 			}
 			break;
 		case 0x02:
@@ -1744,6 +1750,10 @@ void edid_state::preparse_displayid_block(unsigned char *x)
 
 		length -= len + 3;
 		offset += len + 3;
+	}
+	if (update_checksum) {
+		replace_checksum(x + 1, x[2] + 5);
+		replace_checksum(x, EDID_PAGE_SIZE);
 	}
 }
 

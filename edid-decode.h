@@ -145,7 +145,7 @@ struct edid_state {
 		warnings = failures = 0;
 		has_cta = has_dispid = false;
 		hide_serial_numbers = false;
-		replace_serial_numbers = false;
+		replace_unique_ids = false;
 		image_width = image_height = diagonal = 0;
 
 		// Base block state
@@ -216,7 +216,7 @@ struct edid_state {
 	bool has_cta;
 	bool has_dispid;
 	bool hide_serial_numbers;
-	bool replace_serial_numbers;
+	bool replace_unique_ids;
 
 	unsigned min_hor_freq_hz;
 	unsigned max_hor_freq_hz;
@@ -371,7 +371,7 @@ struct edid_state {
 	void detailed_epi(const unsigned char *x);
 	void detailed_timings(const char *prefix, const unsigned char *x,
 			      bool base_or_cta = true);
-	void preparse_detailed_block(unsigned char *x);
+	bool preparse_detailed_block(unsigned char *x);
 	void preparse_base_block(unsigned char *x);
 	void detailed_block(const unsigned char *x);
 	void parse_base_block(const unsigned char *x);

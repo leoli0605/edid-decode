@@ -2560,6 +2560,10 @@ void edid_state::preparse_cta_block(unsigned char *x)
 			if (oui == 0x000c03) {
 				cta.has_hdmi = true;
 				cta.preparsed_phys_addr = (x[i + 4] << 8) | x[i + 5];
+			} else if ((oui == 0xca125c || oui == 0x5c12ca) &&
+				   (x[i] & 0x1f) == 0x15 && replace_unique_ids) {
+				memset(x + i + 6, 0, 16);
+				replace_checksum(x, EDID_PAGE_SIZE);
 			}
 			break;
 		case 0x06:
