@@ -15,7 +15,9 @@ Six hand-crafted EDIDs to test rarely seen EDID extensions or data blocks:
 cta-vesa.test: has VESA Display Transfer Characteristics Data Block and
 	VESA Video Display Device Data Block in the CTA-861 block.
 
-ls-ext.test: has a Localized String Extension Block.
+ls-ext.test: has a Localized String Extension Block using UTF 8.
+ls-ext16.test: has a Localized String Extension Block using UTF 16BE.
+ls-ext32.test: has a Localized String Extension Block using UTF 32BE.
 
 blockmap-128.test: has a single Block Map extension and a total of
 	128 blocks.
