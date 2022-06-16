@@ -39,6 +39,23 @@ The test directory contains some special input files to verify the
 edid-decode parser and hand-crafted EDIDs to test rarely seen
 EDID features.
 
+I host a simple website where you can paste an EDID and get the full
+edid-decode output here:
+
+https://hverkuil.home.xs4all.nl/edid-decode/edid-decode.html
+
+This is updated regularly with the latest edid-decode. It uses emscripten
+and the html file is maintained in the emscripten directory of edid-decode.
+To build edid-decode.js/wasm run 'make edid-decode.js'. This assumes
+that emscripten is installed, of course.
+
+You can use the konqueror browser to run it locally:
+
+	konqueror emscripten/edid-decode.html
+
+For other browsers you need to serve the files using a local webserver.
+See also https://emscripten.org/docs/getting_started/Tutorial.html
+
 You can find a very large collection of EDIDs here:
 https://github.com/linuxhw/EDID
 
