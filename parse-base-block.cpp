@@ -1673,7 +1673,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 	do_checksum("", x, EDID_PAGE_SIZE);
 	if (base.edid_minor >= 3) {
 		if (!base.has_name_descriptor)
-			fail("Missing Display Product Name.\n");
+			msg(base.edid_minor >= 4, "Missing Display Product Name.\n");
 		if ((base.edid_minor == 3 || base.supports_continuous_freq) &&
 		    !base.has_display_range_descriptor)
 			fail("Missing Display Range Limits Descriptor.\n");
