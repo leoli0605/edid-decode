@@ -31,6 +31,8 @@ blockmap-255.test: has two Block Map extensions and a total of
 cta-timings.test: contains various DisplayID and OVT timings in the
 	CTA Extension Block.
 
+cta-eeodb.test: contains an HDMI Forum EDID Extension Override Data Block
+
 
 Examples of old EDID versions:
 
