@@ -1666,9 +1666,6 @@ void edid_state::parse_base_block(const unsigned char *x)
 	data_block = block;
 	if (x[0x7e])
 		printf("  Extension blocks: %u\n", x[0x7e]);
-	if (x[0x7e] + 1U != num_blocks)
-		fail("EDID specified %u extension block(s), but found %u extension block(s).\n",
-		     x[0x7e], num_blocks - 1);
 
 	block = block_name(0x00);
 	data_block.clear();
@@ -1682,7 +1679,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 	}
 }
 
-void edid_state::check_base_block()
+void edid_state::check_base_block(const unsigned char *x)
 {
 	data_block = "Base EDID";
 
@@ -1758,9 +1755,19 @@ void edid_state::check_base_block()
 	if (base.supports_sec_gtf && base.max_pos_neg_hor_freq_khz >= base.sec_gtf_start_freq)
 		fail("Second GTF start frequency %u is less than the highest P/N frequency %u.\n",
 		     base.sec_gtf_start_freq, base.max_pos_neg_hor_freq_khz);
-	if (base.edid_minor == 3 && num_blocks > 2 && !block_map.saw_block_1)
+	if (x[0x7e] + 1U != num_blocks && !cta.hf_eeodb_blocks)
+		fail("EDID specified %u extension block(s), but found %u extension block(s).\n",
+		     x[0x7e], num_blocks - 1);
+	else if (x[0x7e] != 1 && cta.hf_eeodb_blocks)
+		fail("HDMI Forum EDID Extension Override Data Block is present, but Block 0 defined %u instead of 1 Extension Blocks.\n",
+		     x[0x7e]);
+	else if (x[0x7e] == 1 && cta.hf_eeodb_blocks && cta.hf_eeodb_blocks + 1 != num_blocks)
+		fail("HDMI Forum EDID Extension Override Data Block specified %u extension block(s), but found %u extension block(s).\n",
+		     cta.hf_eeodb_blocks, num_blocks - 1);
+
+	if (base.edid_minor == 3 && num_blocks > 2 && !block_map.saw_block_1 && !cta.hf_eeodb_blocks)
 		fail("EDID 1.3 requires a Block Map Extension in Block 1 if there are more than 2 blocks in the EDID.\n");
-	if (base.edid_minor == 3 && num_blocks > 128 && !block_map.saw_block_128)
+	if (base.edid_minor == 3 && num_blocks > 128 && !block_map.saw_block_128 && !cta.hf_eeodb_blocks)
 		fail("EDID 1.3 requires a Block Map Extension in Block 128 if there are more than 128 blocks in the EDID.\n");
 	if (block_map.saw_block_128 && num_blocks > 255)
 		fail("If there is a Block Map Extension in Block 128 then the maximum number of blocks is 255.\n");

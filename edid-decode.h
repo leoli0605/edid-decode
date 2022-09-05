@@ -174,6 +174,7 @@ struct edid_state {
 			cta.has_nvrdb = false;
 		cta.previous_cta_tag = 0xfff;
 		cta.have_hf_vsdb = cta.have_hf_scdb = false;
+		cta.hf_eeodb_blocks = 0;
 		cta.image_width = cta.image_height = 0;
 		cta.block_number = 0;
 		cta.first_svd = true;
@@ -299,6 +300,7 @@ struct edid_state {
 		unsigned short preparsed_phys_addr;
 		unsigned previous_cta_tag;
 		bool have_hf_vsdb, have_hf_scdb;
+		unsigned hf_eeodb_blocks;
 		unsigned block_number;
 		bool first_svd;
 		unsigned supported_hdmi_vic_codes;
@@ -375,7 +377,7 @@ struct edid_state {
 	void preparse_base_block(unsigned char *x);
 	void detailed_block(const unsigned char *x);
 	void parse_base_block(const unsigned char *x);
-	void check_base_block();
+	void check_base_block(const unsigned char *x);
 	void list_dmts();
 	void list_established_timings();
 

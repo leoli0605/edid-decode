@@ -1472,7 +1472,7 @@ int edid_state::parse_edid()
 	if (!options[OptCheck] && !options[OptCheckInline])
 		return 0;
 
-	check_base_block();
+	check_base_block(edid);
 	if (has_cta)
 		check_cta_blocks();
 	if (has_dispid)

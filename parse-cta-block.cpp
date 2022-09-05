@@ -1204,8 +1204,10 @@ static const char *dsc_max_slices[] = {
 static void cta_hf_eeodb(const unsigned char *x, unsigned length)
 {
 	printf("    EDID Extension Block Count: %u\n", x[0]);
-	if (length != 1 || x[0] == 0)
-		fail("Block is too long or reports a 0 block count.\n");
+	if (length != 1)
+		fail("Block is too long.\n");
+	if (x[0] <= 1)
+		fail("Extension Block Count == %u.\n", x[0]);
 }
 
 static void cta_hf_scdb(const unsigned char *x, unsigned length)
@@ -2501,9 +2503,11 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x72a: cta_displayid_type_10(x, length); break;
 	case 0x778:
 		cta_hf_eeodb(x, length);
+		if (block_nr != 1)
+			fail("Data Block can only be present in Block 1.\n");
 		// This must be the first CTA-861 block
 		if (cta.block_number > 0)
-			fail("Block starts at a wrong offset.\n");
+			fail("Data Block starts at a wrong offset.\n");
 		break;
 	case 0x779:
 		if (cta.previous_cta_tag != (0x03|kOUI_HDMI))
@@ -2590,6 +2594,8 @@ void edid_state::preparse_cta_block(unsigned char *x)
 			else if (x[i + 1] == 0x2a)
 				cta.preparsed_total_vtdbs +=
 					((x[i] & 0x1f) - 2) / (6 + ((x[i + 2] & 0x70) >> 4));
+			else if (x[i + 1] == 0x78)
+				cta.hf_eeodb_blocks = x[i + 2];
 			if (x[i + 1] != 0x0e)
 				continue;
 			for_ycbcr420 = true;
