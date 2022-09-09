@@ -793,7 +793,7 @@ void edid_state::cta_y420cmdb(const unsigned char *x, unsigned length)
 
 void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 {
-	char suffix[16];
+	char suffix[24];
 
 	if ((svr > 0 && svr < 128) || (svr > 192 && svr < 254)) {
 		const struct timings *t;
@@ -844,6 +844,7 @@ void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 			printf("    %s: Invalid\n", suffix);
 			fail("Invalid T8VTDB.\n");
 		} else {
+			sprintf(suffix, "T8VTDB: DMT 0x%02x", cta.preparsed_t8vtdb_dmt);
 			printf("    %s\n", suffix);
 			vec_tim.push_back(timings_ext(svr, suffix));
 		}
@@ -2589,9 +2590,12 @@ void edid_state::preparse_cta_block(unsigned char *x)
 				cta_preparse_sldb(x + i + 2, (x[i] & 0x1f) - 1);
 			else if (x[i + 1] == 0x22)
 				cta.preparsed_total_vtdbs++;
-			else if (x[i + 1] == 0x23)
+			else if (x[i + 1] == 0x23) {
 				cta.preparsed_has_t8vtdb = true;
-			else if (x[i + 1] == 0x2a)
+				cta.preparsed_t8vtdb_dmt = x[i + 3];
+				if (x[i + 2] & 0x08)
+					cta.preparsed_t8vtdb_dmt |= x[i + 4] << 8;
+			} else if (x[i + 1] == 0x2a)
 				cta.preparsed_total_vtdbs +=
 					((x[i] & 0x1f) - 2) / (6 + ((x[i + 2] & 0x70) >> 4));
 			else if (x[i + 1] == 0x78)

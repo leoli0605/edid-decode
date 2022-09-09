@@ -189,6 +189,7 @@ struct edid_state {
 		cta.preparsed_total_dtds = 0;
 		cta.preparsed_total_vtdbs = 0;
 		cta.preparsed_has_t8vtdb = false;
+		cta.preparsed_t8vtdb_dmt = 0;
 
 		// DisplayID block state
 		dispid.version = 0;
@@ -277,6 +278,7 @@ struct edid_state {
 		vec_timings_ext preferred_timings;
 		vec_timings_ext preferred_timings_vfpdb;
 		bool preparsed_has_t8vtdb;
+		unsigned preparsed_t8vtdb_dmt;
 		// Keep track of the found Tag/Extended Tag pairs.
 		// The unsigned value is equal to: (tag) | (OUI enum << 12) or (extended tag) | (tag << 8) | (OUI enum << 12)
 		std::vector<unsigned> found_tags;
