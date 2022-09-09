@@ -844,7 +844,7 @@ void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 			printf("    %s: Invalid\n", suffix);
 			fail("Invalid T8VTDB.\n");
 		} else {
-			sprintf(suffix, "T8VTDB: DMT 0x%02x", cta.preparsed_t8vtdb_dmt);
+			sprintf(suffix, "DMT 0x%02x", cta.preparsed_t8vtdb_dmt);
 			printf("    %s\n", suffix);
 			vec_tim.push_back(timings_ext(svr, suffix));
 		}
