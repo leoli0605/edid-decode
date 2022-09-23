@@ -513,6 +513,13 @@ static void cta_audio_block(const unsigned char *x, unsigned length)
 				printf("      Supports Joint Object Coding\n");
 			if (x[i+2] & 2)
 				printf("      Supports Joint Object Coding with ACMOD28\n");
+		} else if (format == 11) {
+			// Reverse engineering, see:
+			// https://www.avsforum.com/threads/lg-c9-earc-info-thread.3072900/post-61795538
+			if (x[i+2] & 2)
+				printf("      Supports DTS:X\n");
+			// Note: I strongly suspect that bit 0 indicates DTS-HD MA support.
+			printf("      Audio Format Code dependent value: 0x%02x\n", x[i+2]);
 		} else if (format == 12) {
 			if (x[i+2] & 1) {
 				printf("      Supports Dolby TrueHD, object audio PCM and channel-based PCM\n");
