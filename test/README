@@ -31,6 +31,15 @@ blockmap-255.test: has two Block Map extensions and a total of
 cta-timings.test: contains various DisplayID and OVT timings in the
 	CTA Extension Block.
 
+cta-vfpdb.test: use to test correct VFPDB parsing. This EDID has a
+	1080p60 DTD 1 in Block 0, and a 1280p60 DTD 2 and 2560x1440p60 DTD 3 in
+	Block 3. The Video Format Preference Data Block says DTD 2.
+
+	If the display driver selects 1080p60, then the driver does not
+	support the VFPDB. If it selects 1280p60, then it supports the
+	VFPDB correctly. If it selects 2560x1440p60, then it supports the
+	VFPDB incorrectly, ignoring DTDs in Block 0.
+
 cta-eeodb.test: contains an HDMI Forum EDID Extension Override Data Block
 
 
