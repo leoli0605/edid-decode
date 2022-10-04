@@ -1027,20 +1027,20 @@ void edid_state::parse_displayid_tiled_display_topology(const unsigned char *x, 
 	printf("    Tile resolution: %ux%u\n", tile_width + 1, tile_height + 1);
 	if (caps & 0x40) {
 		if (pix_mult) {
-			printf("    Top bevel size: %.1f pixels\n",
+			printf("    Top bezel size: %.1f pixels\n",
 			       pix_mult * x[12] / 10.0);
-			printf("    Bottom bevel size: %.1f pixels\n",
+			printf("    Bottom bezel size: %.1f pixels\n",
 			       pix_mult * x[13] / 10.0);
-			printf("    Right bevel size: %.1f pixels\n",
+			printf("    Right bezel size: %.1f pixels\n",
 			       pix_mult * x[14] / 10.0);
-			printf("    Left bevel size: %.1f pixels\n",
+			printf("    Left bezel size: %.1f pixels\n",
 			       pix_mult * x[15] / 10.0);
 		} else {
-			fail("No bevel information, but the pixel multiplier is non-zero.\n");
+			fail("No bezel information, but the pixel multiplier is non-zero.\n");
 		}
 		printf("    Tile resolution: %ux%u\n", tile_width + 1, tile_height + 1);
 	} else if (pix_mult) {
-		fail("No bevel information, but the pixel multiplier is non-zero.\n");
+		fail("No bezel information, but the pixel multiplier is non-zero.\n");
 	}
 	if (is_v2)
 		printf("    Tiled Display Manufacturer/Vendor ID: %02X-%02X-%02X\n",
