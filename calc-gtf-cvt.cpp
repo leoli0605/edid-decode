@@ -152,7 +152,7 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	double interlace = int_rqd ? 0.5 : 0;
 	double total_active_pixels = h_pixels_rnd + hor_margin * 2;
 	double v_field_rate_rqd = int_rqd ? ip_freq_rqd * 2 : ip_freq_rqd;
-	double clock_step = rb == RB_CVT_V2 ? 0.001 : 0.25;
+	double clock_step = rb >= RB_CVT_V2 ? 0.001 : 0.25;
 	double h_blank = (rb == RB_CVT_V1 || (rb == RB_CVT_V3 && alt)) ? 160 : 80;
 	double rb_v_fporch = rb == RB_CVT_V1 ? 3 : 1;
 	double refresh_multiplier = (rb == RB_CVT_V2 && alt) ? 1000.0 / 1001.0 : 1;
