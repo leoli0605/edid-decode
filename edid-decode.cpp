@@ -1348,6 +1348,10 @@ void edid_state::print_native_res()
 			h *= c;
 
 			if (image_width) {
+				printf("\n----------------\n");
+				printf("\nCalculated image size for a diagonal of %.1f\" is %.1fx%.1fmm.\n",
+				     diagonal, w / 10.0, h / 10.0);
+
 				if (fabs((double)image_width - w) >= 100.0 ||
 				    fabs((double)image_height - h) >= 100.0)
 					warn("Calculated image size is %.1fx%.1fmm, EDID image size is %.1fx%.1fmm.\n",
