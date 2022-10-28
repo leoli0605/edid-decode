@@ -232,7 +232,7 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	t.vfp = v_blank - t.vbp - t.vsync;
 	t.pixclk_khz = round(1000.0 * pixel_freq);
 	t.hsync = h_sync;
-	if (rb == RB_CVT_V3)
+	if (rb >= RB_CVT_V2)
 		t.hfp = 8;
 	else
 		t.hfp = (h_blank / 2.0) - t.hsync;
