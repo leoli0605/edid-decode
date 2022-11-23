@@ -291,6 +291,11 @@ void calc_ratio(struct timings *t)
 	}
 	t->hratio = t->hact / d;
 	t->vratio = t->vact / d;
+
+	if (t->hratio == 8 && t->vratio == 5) {
+		t->hratio = 16;
+		t->vratio = 10;
+	}
 }
 
 std::string edid_state::dtd_type(unsigned cnt)
