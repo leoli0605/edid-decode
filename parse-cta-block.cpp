@@ -2074,10 +2074,10 @@ static const char *colorimetry1_map[] = {
 };
 
 static const char *colorimetry2_map[] = {
-	"Reserved MD0",
-	"Reserved MD1",
-	"Reserved MD2",
-	"Reserved MD3",
+	"Gamut Boundary Description Metadata Profile P0",
+	"Reserved Gamut Boundary Description Metadata Profile P1",
+	"Reserved Gamut Boundary Description Metadata Profile P2",
+	"Reserved Gamut Boundary Description Metadata Profile P3",
 	"Default",
 	"sRGB",
 	"ICtCp",
@@ -2095,8 +2095,17 @@ void edid_state::cta_colorimetry_block(const unsigned char *x, unsigned length)
 	for (i = 0; i < ARRAY_SIZE(colorimetry1_map); i++)
 		if (x[0] & (1 << i))
 			printf("    %s\n", colorimetry1_map[i]);
-	if (x[1] & 0xf)
-		fail("Reserved bits MD0-MD3 must be 0.\n");
+	// Bits MD0-MD3 are used to indicate which HDMI Gamut Boundary Description
+	// Metadata Profiles are supported.
+	//
+	// HDMI 1.3a in section 5.3.12 describes 4 possible profiles, but it marks
+	// P3 as 'defined in a future specification'.
+	//
+	// HDMI 1.4b, however, only specifies profile P0 in section 8.3.3. And I've
+	// only seen P0 in practice. My assumption is that profiles P1-P3 are never
+	// used, and so these bits should be 0.
+	if (x[1] & 0xe)
+		fail("Reserved bits MD1-MD3 must be 0.\n");
 	for (i = 0; i < ARRAY_SIZE(colorimetry2_map); i++)
 		if (x[1] & (1 << i))
 			printf("    %s\n", colorimetry2_map[i]);
