@@ -1036,7 +1036,7 @@ void edid_state::parse_displayid_tiled_display_topology(const unsigned char *x, 
 			printf("    Left bezel size: %.1f pixels\n",
 			       pix_mult * x[15] / 10.0);
 		} else {
-			fail("No bezel information, but the pixel multiplier is non-zero.\n");
+			fail("Bezel information bit is set, but the pixel multiplier is zero.\n");
 		}
 		printf("    Tile resolution: %ux%u\n", tile_width + 1, tile_height + 1);
 	} else if (pix_mult) {
