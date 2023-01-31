@@ -2203,6 +2203,17 @@ static void cta_hdr_dyn_metadata_block(const unsigned char *x, unsigned length)
 	}
 }
 
+static const char *infoframe_types[] = {
+	NULL,
+	"Vendor-Specific",
+	"Auxiliary Video Information",
+	"Source Product Description",
+	"Audio",
+	"MPEG Source",
+	"NTSC VBI",
+	"Dynamic Range and Mastering",
+};
+
 static void cta_ifdb(const unsigned char *x, unsigned length)
 {
 	unsigned len_hdr = x[0] >> 5;
@@ -2218,16 +2229,23 @@ static void cta_ifdb(const unsigned char *x, unsigned length)
 	x += len_hdr + 2;
 	while (length > 0) {
 		int payload_len = x[0] >> 5;
+		unsigned char type = x[0] & 0x1f;
 
-		if ((x[0] & 0x1f) == 1 && length >= 4) {
+		const char *name = NULL;
+		if (type < ARRAY_SIZE(infoframe_types))
+			name = infoframe_types[type];
+		if (!name)
+			name = "Unknown";
+		printf("    %s InfoFrame (%u)", name, type);
+
+		if (type == 1 && length >= 4) {
 			unsigned oui = (x[3] << 16) | (x[2] << 8) | x[1];
 
-			printf("    InfoFrame Type Code %u, OUI %s\n",
-			       x[0] & 0x1f, ouitohex(oui).c_str());
+			printf(", OUI %s\n", ouitohex(oui).c_str());
 			x += 4;
 			length -= 4;
 		} else {
-			printf("    InfoFrame Type Code %u\n", x[0] & 0x1f);
+			printf("\n");
 			x++;
 			length--;
 		}
