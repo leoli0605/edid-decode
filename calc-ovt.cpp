@@ -14,7 +14,9 @@
 #include "edid-decode.h"
 
 #define MinVblankDuration 460
+#define MinVblankLines 20
 #define MinVsyncLeadingEdge 400
+#define MinVsyncLELines 14
 #define MinClockRate420 590000000
 #define PixelFactor420 2
 #define MinHblank444 80
@@ -95,7 +97,7 @@ timings edid_state::calc_ovt_mode(unsigned Hactive, unsigned Vactive,
 	// Step 2
 	double MaxActiveTime = (1000000.0 / MaxVrate) - MinVblankDuration;
 	double MinLineTime = MaxActiveTime / Vactive;
-	unsigned MinVblank = ceil(MinVblankDuration / MinLineTime);
+	unsigned MinVblank = max(MinVblankLines, ceil(MinVblankDuration / MinLineTime));
 	unsigned MinVtotal = Vactive + MinVblank;
 
 	if (MinVtotal % VtotalGranularity)
@@ -159,7 +161,8 @@ timings edid_state::calc_ovt_mode(unsigned Hactive, unsigned Vactive,
 
 	// Step 8
 	unsigned Vblank = Vtotal - Vactive;
-	unsigned VsyncPosition = ceil((double)MinVsyncLeadingEdge * PixelClockRate / (1000000.0 * Htotal));
+	unsigned VsyncPosition = max(MinVsyncLELines,
+				     ceil((double)MinVsyncLeadingEdge * PixelClockRate / (1000000.0 * Htotal)));
 	t.vfp = Vblank - VsyncPosition;
 
 	t.vsync = 8;

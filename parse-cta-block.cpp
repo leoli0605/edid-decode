@@ -1903,35 +1903,38 @@ void edid_state::cta_rcdb(const unsigned char *x, unsigned length)
 	}
 }
 
-static const char *speaker_location[] = {
-	"FL - Front Left",
-	"FR - Front Right",
-	"FC - Front Center",
-	"LFE1 - Low Frequency Effects 1",
-	"BL - Back Left",
-	"BR - Back Right",
-	"FLC - Front Left of Center",
-	"FRC - Front Right of Center",
-	"BC - Back Center",
-	"LFE2 - Low Frequency Effects 2",
-	"SiL - Side Left",
-	"SiR - Side Right",
-	"TpFL - Top Front Left",
-	"TpFR - Top Front Right",
-	"TpFC - Top Front Center",
-	"TpC - Top Center",
-	"TpBL - Top Back Left",
-	"TpBR - Top Back Right",
-	"TpSiL - Top Side Left",
-	"TpSiR - Top Side Right",
-	"TpBC - Top Back Center",
-	"BtFC - Bottom Front Center",
-	"BtFL - Bottom Front Left",
-	"BtFR - Bottom Front Right",
-	"FLW - Front Left Wide",
-	"FRW - Front Right Wide",
-	"LS - Left Surround",
-	"RS - Right Surround",
+static const struct {
+	const char *name;
+	double x, y, z;
+} speaker_location[] = {
+	{ "FL - Front Left",		    -1,    1,  0 },
+	{ "FR - Front Right",		     1,    1,  0 },
+	{ "FC - Front Center",		     0,    1,  0 },
+	{ "LFE1 - Low Frequency Effects 1", -0.5,  1, -1 },
+	{ "BL - Back Left",		    -1,   -1,  0 },
+	{ "BR - Back Right",		     1,   -1,  0 },
+	{ "FLC - Front Left of Center",	    -0.5,  1,  0 },
+	{ "FRC - Front Right of Center",     0.5,  1,  0 },
+	{ "BC - Back Center",		     0,   -1,  0 },
+	{ "LFE2 - Low Frequency Effects 2",  0.5,  1, -1 },
+	{ "SiL - Side Left",		    -1, 1.0/3.0, 0 },
+	{ "SiR - Side Right",		     1, 1.0/3.0, 0 },
+	{ "TpFL - Top Front Left",	    -1,    1,  1 },
+	{ "TpFR - Top Front Right",	     1,    1,  1 },
+	{ "TpFC - Top Front Center",	     0,    1,  1 },
+	{ "TpC - Top Center",		     0,    0,  1 },
+	{ "TpBL - Top Back Left",	    -1,   -1,  1 },
+	{ "TpBR - Top Back Right",	     1,   -1,  1 },
+	{ "TpSiL - Top Side Left",	    -1,    0,  1 },
+	{ "TpSiR - Top Side Right",	     1,    0,  1 },
+	{ "TpBC - Top Back Center",	     0,   -1,  1 },
+	{ "BtFC - Bottom Front Center",	     0,    1, -1 },
+	{ "BtFL - Bottom Front Left",	    -1,    1, -1 },
+	{ "BtFR - Bottom Front Right",	     1,    1, -1 },
+	{ "FLW - Front Left Wide",	    -1, 2.0/3.0, 0 },
+	{ "FRW - Front Right Wide",	     1, 2.0/3.0, 0 },
+	{ "LS - Left Surround",		    -1,    0,  0 },
+	{ "RS - Right Surround",	     1,    0,  0 },
 };
 
 void edid_state::cta_sldb(const unsigned char *x, unsigned length)
@@ -1955,13 +1958,17 @@ void edid_state::cta_sldb(const unsigned char *x, unsigned length)
 			active_cnt++;
 		}
 		if ((x[1] & 0x1f) < ARRAY_SIZE(speaker_location))
-			printf("      Speaker: %s\n", speaker_location[x[1] & 0x1f]);
+			printf("      Speaker: %s\n", speaker_location[x[1] & 0x1f].name);
 		if (length >= 5 && (x[0] & 0x40)) {
 			printf("      X: %.3f * Xmax\n", decode_uchar_as_double(x[2]));
 			printf("      Y: %.3f * Ymax\n", decode_uchar_as_double(x[3]));
 			printf("      Z: %.3f * Zmax\n", decode_uchar_as_double(x[4]));
 			length -= 3;
 			x += 3;
+		} else {
+			printf("      X: %.3f * Xmax (approximately)\n", speaker_location[x[1] & 0x1f].x);
+			printf("      Y: %.3f * Ymax (approximately)\n", speaker_location[x[1] & 0x1f].y);
+			printf("      Z: %.3f * Zmax (approximately)\n", speaker_location[x[1] & 0x1f].z);
 		}
 
 		length -= 2;
