@@ -909,7 +909,7 @@ static std::string hdmi_latency2s(unsigned char l, bool is_video)
 		return "Unknown";
 	if (l == 0xff)
 		return is_video ? "Video not supported" : "Audio not supported";
-	return std::to_string(1 + 2 * l) + " ms";
+	return std::to_string(2 * (l - 1)) + " ms";
 }
 
 void edid_state::hdmi_latency(unsigned char vid_lat, unsigned char aud_lat,
@@ -931,8 +931,8 @@ void edid_state::hdmi_latency(unsigned char vid_lat, unsigned char aud_lat,
 	if (!aud_lat || aud_lat > 251)
 		return;
 
-	unsigned vid_ms = 1 + 2 * vid_lat;
-	unsigned aud_ms = 1 + 2 * aud_lat;
+	unsigned vid_ms = 2 * (vid_lat - 1);
+	unsigned aud_ms = 2 * (aud_lat - 1);
 
 	// HDMI 2.0 latency checks for devices without HDMI output
 	if (aud_ms < vid_ms)
