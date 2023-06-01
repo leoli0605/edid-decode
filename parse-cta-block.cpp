@@ -1559,44 +1559,20 @@ static void cta_dolby_video(const unsigned char *x, unsigned length)
 		case 3: printf("Reserved\n"); break;
 		}
 
-		// This divider constant is a guess. According to what I read
-		// when googling for how to interpret these values, the Min PQ
-		// maps to a range of 0-1 cd/m^2, and the Max PQ maps to a
-		// range of 100-10000 cd/m^2. Since the maximum value for the Max PQ
-		// is 2055 + 65 * 31 = 4070, I am guessing that that is the correct
-		// divider, but it might well be 4095 or 4096 instead.
-		//
-		// I'm also not sure if the divider for Min PQ is the same as for
-		// Max PQ. To map the max value of 20 * 31 to 1 cd/m^2 you would
-		// need a divider of 4134 or 4135, but I suspect the same divider
-		// is used.
-		const double dv_pq_div = 2055 + 31 * 65;
-
 		unsigned pq = 20 * (x[1] >> 3);
-		printf("    Target Min PQ v2: %u (%.8f cd/m^2)\n", pq, pq2nits(pq / dv_pq_div));
+		printf("    Target Min PQ v2: %u (%.8f cd/m^2)\n", pq, pq2nits(pq / 4095.0));
 		pq = 2055 + 65 * (x[2] >> 3);
-		printf("    Target Max PQ v2: %u (%u cd/m^2)\n", pq, (unsigned)pq2nits(pq / dv_pq_div));
-
-		double xmin = 0.625;
-		double xstep = (0.74609375 - xmin) / 31.0;
-		double ymin = 0.25;
-		double ystep = (0.37109375 - ymin) / 31.0;
+		printf("    Target Max PQ v2: %u (%u cd/m^2)\n", pq, (unsigned)pq2nits(pq / 4095.0));
 
 		printf("    Unique Rx, Ry: %.8f, %.8f\n",
-		       xmin + xstep * (x[5] >> 3),
-		       ymin + ystep * (x[6] >> 3));
-		xstep = 0.49609375 / 127.0;
-		ymin = 0.5;
-		ystep = (0.99609375 - ymin) / 127.0;
+		       0.625 + (x[5] >> 3) / 256.0,
+		       0.25 + (x[6] >> 3) / 256.0);
 		printf("    Unique Gx, Gy: %.8f, %.8f\n",
-		       xstep * (x[3] >> 1), ymin + ystep * (x[4] >> 1));
-		xmin = 0.125;
-		xstep = (0.15234375 - xmin) / 7.0;
-		ymin = 0.03125;
-		ystep = (0.05859375 - ymin) / 7.0;
+		       (x[3] >> 1) / 256.0,
+		       0.5 + (x[4] >> 1) / 256.0);
 		printf("    Unique Bx, By: %.8f, %.8f\n",
-		       xmin + xstep * (x[5] & 0x07),
-		       ymin + ystep * (x[6] & 0x07));
+		       0.125 + (x[5] & 0x07) / 256.0,
+		       0.03125 + (x[6] & 0x07) / 256.0);
 	}
 }
 
@@ -1615,6 +1591,12 @@ static void cta_dolby_audio(const unsigned char *x, unsigned length)
 		printf("    Center speaker zone present\n");
 	if (x[1] & 0x01)
 		printf("    Supports Dolby MAT PCM decoding at 48 kHz only, does not support TrueHD\n");
+}
+
+static void cta_uhda_fmm(const unsigned char *x, unsigned length)
+{
+	printf("    Filmmaker Mode Content Type: %u\n", x[0]);
+	printf("    Filmmaker Mode Content Subtype: %u\n", x[1]);
 }
 
 static const char *speaker_map[] = {
@@ -2515,6 +2497,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 		break;
 	case 0x03|kOUI_AMD: cta_amd(x, length); break;
 	case 0x03|kOUI_Microsoft: if (length != 0x12) goto dodefault; cta_microsoft(x, length); break;
+	case 0x03|kOUI_UHDA: cta_uhda_fmm(x, length); break;
 	case 0x04: cta_sadb(x, length); break;
 	case 0x05: cta_vesa_dtcdb(x, length); break;
 	case 0x06: cta_vfdb(x, length); break;
