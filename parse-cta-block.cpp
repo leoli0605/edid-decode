@@ -1439,7 +1439,9 @@ static void cta_hdr10plus(const unsigned char *x, unsigned length)
 		fail("Empty Data Block with length %u.\n", length);
 		return;
 	}
-	printf("    Application Version: %u\n", x[0]);
+	printf("    Application Version: %u\n", x[0] & 3);
+	printf("    Full Frame Peak Luminance Index: %u\n", (x[0] >> 2) & 3);
+	printf("    Peak Luminance Index: %u\n", x[0] >> 4);
 	hex_block("    ", x + 1, length - 1);
 }
 
