@@ -1272,6 +1272,10 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 	if (length <= 4)
 		return;
 
+	if (x[4] & 0x80)
+		printf("    Supports FAPA End Extended\n");
+	if (x[4] & 0x40)
+		printf("    Supports QMS\n");
 	if (x[4] & 0x20)
 		printf("    Supports Mdelta\n");
 	if (x[4] & 0x10)
@@ -1310,6 +1314,10 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 		printf("    Supports VESA DSC 1.2a compression\n");
 	if (x[7] & 0x40)
 		printf("    Supports Compressed Video Transport for 4:2:0 Pixel Encoding\n");
+	if (x[7] & 0x20)
+		printf("    Supports QMS TFRmax\n");
+	if (x[7] & 0x10)
+		printf("    Supports QMS TFRmin\n");
 	if (x[7] & 0x08)
 		printf("    Supports Compressed Video Transport at any valid 1/16th bit bpp\n");
 	if (x[7] & 0x04)
@@ -1343,6 +1351,149 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 	if (x[9] & 0x3f)
 		printf("    Maximum number of bytes in a line of chunks: %u\n",
 		       1024 * (1 + (x[9] & 0x3f)));
+}
+
+// Convert a PQ value (0-1) to cd/m^2 aka nits (0-10000)
+static double pq2nits(double pq)
+{
+	const double m1 = 2610.0 / 16384.0;
+	const double m2 = 128.0 * (2523.0 / 4096.0);
+	const double c1 = 3424.0 / 4096.0;
+	const double c2 = 32.0 * (2413.0 / 4096.0);
+	const double c3 = 32.0 * (2392.0 / 4096.0);
+	double e = pow(pq, 1.0 / m2);
+	double v = e - c1;
+
+	if (v < 0)
+		v = 0;
+	v /= c2 - c3 * e;
+	v = pow(v, 1.0 / m1);
+	return v * 10000.0;
+}
+
+static double chrom2d(const unsigned char *x)
+{
+	unsigned v = x[0] + (x[1] << 8);
+
+	return v * 0.00002;
+}
+
+static double perc2d(unsigned char x)
+{
+	double m = x >> 2;
+	double e = x & 3;
+
+	return 100.0 * (m / 64.0) * pow(10, -e);
+}
+
+static void cta_hf_sbtmdb(const unsigned char *x, unsigned length)
+{
+	int len = length;
+
+	if (!length)
+		fail("Block is too short.\n");
+	printf("    Version: %d\n", x[0] & 0xf);
+	switch ((x[0] >> 5) & 3) {
+	case 0:
+		printf("    Does not support a General RDM format\n");
+		break;
+	case 1:
+		printf("    Supports an SDR-range General RDM format\n");
+		break;
+	case 2:
+		printf("    Supports an HDR-range General RDM format\n");
+		break;
+	default:
+		fail("Invalid GRDM Support value.\n");
+		break;
+	}
+	if (!(x[0] & 0x80))
+		return;
+
+	bool uses_hgig_drdm = true;
+
+	printf("    Supports a D-RDM format\n");
+	if (x[1] & 0x10)
+		printf("    Use HGIG D-RDM\n");
+	switch (x[1] & 7) {
+	case 0:
+		printf("    HGIG D-RDM is not used\n");
+		uses_hgig_drdm = false;
+		break;
+	case 1:
+		printf("    PBnits[0] = 600 cd/m^2\n");
+		break;
+	case 2:
+		printf("    PBnits[0] = 1000 cd/m^2\n");
+		break;
+	case 3:
+		printf("    PBnits[0] = 4000 cd/m^2\n");
+		break;
+	case 4:
+		printf("    PBnits[0] = 10000 cd/m^2\n");
+		break;
+	default:
+		fail("Invalid HGIG D-DRM value.\n");
+		break;
+	}
+
+	bool has_chromaticities = false;
+
+	if (x[1] & 0x20)
+		printf("    MaxRGB\n");
+	switch (x[1] >> 6) {
+	case 0:
+		printf("    Gamut is explicit\n");
+		has_chromaticities = true;
+		break;
+	case 1:
+		printf("    Gamut is Rec. ITU-R BT.709\n");
+		break;
+	case 2:
+		printf("    Gamut is SMPTE ST 2113\n");
+		break;
+	default:
+		printf("    Gamut is Rec. ITU-R BT.2020\n");
+		break;
+	}
+	x += 2;
+	len -= 2;
+	if (has_chromaticities) {
+		printf("    Red: (%.5f, %.5f)\n", chrom2d(x), chrom2d(x + 2));
+		printf("    Green: (%.5f, %.5f)\n", chrom2d(x + 4), chrom2d(x + 6));
+		printf("    Blue: (%.5f, %.5f)\n", chrom2d(x + 8), chrom2d(x + 10));
+		printf("    White: (%.5f, %.5f)\n", chrom2d(x + 12), chrom2d(x + 14));
+		x += 16;
+		len -= 16;
+	}
+	if (uses_hgig_drdm)
+		return;
+	printf("    Min Brightness 10: %.8f cd/m^2\n", pq2nits((x[0] << 1) / 4095.0));
+	printf("    Peak Brightness 100: %u cd/m^2\n", (unsigned)pq2nits((x[1] << 4) / 4095.0));
+	x += 2;
+	len -= 2;
+	if (len <= 0)
+		return;
+	printf("    Percentage of Peak Brightness P0: %.2f%%\n", perc2d(x[0]));
+	printf("    Peak Brightness P0: %.8f cd/m^2\n", pq2nits((x[1] << 1) / 4095.0));
+	x += 2;
+	len -= 2;
+	if (len <= 0)
+		return;
+	printf("    Percentage of Peak Brightness P1: %.2f%%\n", perc2d(x[0]));
+	printf("    Peak Brightness P1: %.8f cd/m^2\n", pq2nits((x[1] << 1) / 4095.0));
+	x += 2;
+	len -= 2;
+	if (len <= 0)
+		return;
+	printf("    Percentage of Peak Brightness P2: %.2f%%\n", perc2d(x[0]));
+	printf("    Peak Brightness P2: %.8f cd/m^2\n", pq2nits((x[1] << 1) / 4095.0));
+	x += 2;
+	len -= 2;
+	if (len <= 0)
+		return;
+	printf("    Percentage of Peak Brightness P3: %.2f%%\n", perc2d(x[0]));
+	printf("    Peak Brightness P3: %.8f cd/m^2\n", pq2nits((x[1] << 1) / 4095.0));
 }
 
 static void cta_amd(const unsigned char *x, unsigned length)
@@ -1443,24 +1594,6 @@ static void cta_hdr10plus(const unsigned char *x, unsigned length)
 	printf("    Full Frame Peak Luminance Index: %u\n", (x[0] >> 2) & 3);
 	printf("    Peak Luminance Index: %u\n", x[0] >> 4);
 	hex_block("    ", x + 1, length - 1);
-}
-
-// Convert a PQ value (0-1) to cd/m^2 aka nits (0-10000)
-static double pq2nits(double pq)
-{
-	const double m1 = 2610.0 / 16384.0;
-	const double m2 = 128.0 * (2523.0 / 4096.0);
-	const double c1 = 3424.0 / 4096.0;
-	const double c2 = 32.0 * (2413.0 / 4096.0);
-	const double c3 = 32.0 * (2392.0 / 4096.0);
-	double e = pow(pq, 1.0 / m2);
-	double v = e - c1;
-
-	if (v < 0)
-		v = 0;
-	v /= c2 - c3 * e;
-	v = pow(v, 1.0 / m1);
-	return v * 10000.0;
 }
 
 static void cta_dolby_video(const unsigned char *x, unsigned length)
@@ -2421,6 +2554,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 
 	case 0x778: data_block = "HDMI Forum EDID Extension Override Data Block"; break;
 	case 0x779: data_block = "HDMI Forum Sink Capability Data Block"; break;
+	case 0x77a: data_block = "HDMI Forum Source-Based Tone Mapping Data Block"; break;
 
 	default:
 		std::string unknown_name;
@@ -2468,6 +2602,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x713:
 	case 0x778:
 	case 0x779:
+	case 0x77a:
 		if (std::find(found_tags.begin(), found_tags.end(), tag) != found_tags.end())
 			fail("Only one instance of this Data Block is allowed.\n");
 		break;
@@ -2550,6 +2685,9 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 			printf("  Non-zero SCDB reserved fields!\n");
 		cta_hf_scdb(x + 2, length - 2);
 		cta.have_hf_scdb = true;
+		break;
+	case 0x77a:
+		cta_hf_sbtmdb(x, length);
 		break;
 dodefault:
 	default:
