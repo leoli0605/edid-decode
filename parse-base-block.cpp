@@ -1733,11 +1733,7 @@ void edid_state::check_base_block(const unsigned char *x)
 		if (!out_of_range)
 			err += "    Could be due to a Monitor Range off-by-one rounding issue\n";
 
-		/*
-		 * EDID 1.4 states (in an Errata) that explicitly defined
-		 * timings supersede the monitor range definition.
-		 */
-		msg(!out_of_range || base.edid_minor >= 4, "%s", err.c_str());
+		warn("%s", err.c_str());
 	}
 
 	if ((image_width && dtd_max_hsize_mm >= 10 + image_width / 10) ||
