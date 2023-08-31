@@ -552,6 +552,10 @@ static void cta_audio_block(const unsigned char *x, unsigned length)
 
 void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 {
+	bool ascending = !for_ycbcr420;
+	unsigned char last_vic = 0;
+	bool first_vic_is_1_to_4 = false;
+	bool have_vics_5_and_up = false;
 	unsigned i;
 
 	for (i = 0; i < n; i++)  {
@@ -570,6 +574,14 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 			vic = svd & 0x7f;
 			native = svd & 0x80;
 		}
+
+		if (i == 0)
+			first_vic_is_1_to_4 = vic <= 4;
+		if (vic > 4)
+			have_vics_5_and_up = true;
+		if (vic < last_vic)
+			ascending = false;
+		last_vic = vic;
 
 		t = find_vic_id(vic);
 		if (t) {
@@ -631,6 +643,8 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 		if (for_ycbcr420 && cta.preparsed_has_vic[0][vic])
 			fail("YCbCr 4:2:0-only VIC %u is also a regular VIC.\n", vic);
 	}
+	if (n > 1 && ascending && first_vic_is_1_to_4 && have_vics_5_and_up)
+		warn("All VICs are in ascending order, and the first (preferred) VIC <= 4, is that intended?\n");
 }
 
 cta_vfd edid_state::cta_parse_vfd(const unsigned char *x, unsigned lvfd)
