@@ -644,19 +644,19 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 	case 0x00: /* default gtf */
 		range_class = "GTF";
 		if (base.edid_minor >= 4 && !base.supports_continuous_freq)
-			fail("GTF can't be combined with non-continuous frequencies.\n");
+			fail("GTF is supported, but the display does not support continuous frequencies.\n");
 		if (base.edid_minor >= 4)
 			warn("GTF support is deprecated in EDID 1.4.\n");
 		break;
 	case 0x01: /* range limits only */
-		range_class = "Bare Limits";
+		range_class = "Range Limits Only";
 		if (base.edid_minor < 4)
 			fail("'%s' is not allowed for EDID < 1.4.\n", range_class.c_str());
 		break;
 	case 0x02: /* secondary gtf curve */
 		range_class = "Secondary GTF";
 		if (base.edid_minor >= 4 && !base.supports_continuous_freq)
-			fail("GTF can't be combined with non-continuous frequencies.\n");
+			fail("Secondary GTF is supported, but the display does not support continuous frequencies.\n");
 		if (base.edid_minor >= 4)
 			warn("GTF support is deprecated in EDID 1.4.\n");
 		has_sec_gtf = true;
@@ -667,7 +667,7 @@ void edid_state::detailed_display_range_limits(const unsigned char *x)
 		if (base.edid_minor < 4)
 			fail("'%s' is not allowed for EDID < 1.4.\n", range_class.c_str());
 		else if (!base.supports_continuous_freq)
-			fail("CVT can't be combined with non-continuous frequencies.\n");
+			fail("CVT is supported, but the display does not support continuous frequencies.\n");
 		break;
 	default: /* invalid */
 		fail("Unknown range class (0x%02x).\n", x[10]);
@@ -1569,7 +1569,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 	if (x[0x18] & 0x01) {
 		if (base.edid_minor >= 4) {
 			base.supports_continuous_freq = true;
-			printf("    Display is continuous frequency\n");
+			printf("    Display supports continuous frequencies\n");
 		} else {
 			printf("    Supports GTF timings within operating range\n");
 			base.supports_gtf = true;
