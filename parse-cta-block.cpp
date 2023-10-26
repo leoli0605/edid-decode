@@ -2816,15 +2816,14 @@ void edid_state::parse_cta_block(const unsigned char *x)
 		fail("The HDMI Specification requires CTA Extension revision 3.\n");
 	if (version > 3)
 		warn("Unknown CTA-861 Extension revision %u.\n", version);
+	if (offset > 0 && offset < 4)
+		fail("Invalid CTA-861 Extension offset value (byte 2).\n");
 
 	if (version >= 1) do {
 		if (version == 1 && x[3] != 0)
 			fail("Non-zero byte 3.\n");
 
-		if (offset < 4)
-			break;
-
-		if (version < 3 && ((offset - 4) / 8)) {
+		if (version < 3 && offset >= 4 && ((offset - 4) / 8)) {
 			printf("  8-byte timing descriptors: %u\n", (offset - 4) / 8);
 			fail("8-byte descriptors were never used.\n");
 		}
@@ -2873,6 +2872,10 @@ void edid_state::parse_cta_block(const unsigned char *x)
 					fail("The HDMI Specification requires that the first Extension Block (that is not a Block Map) is an CTA-861 Extension Block.\n");
 			}
 		}
+
+		if (offset < 4)
+			break;
+
 		if (version >= 3) {
 			unsigned i;
 
