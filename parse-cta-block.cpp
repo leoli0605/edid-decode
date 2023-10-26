@@ -2873,8 +2873,15 @@ void edid_state::parse_cta_block(const unsigned char *x)
 			}
 		}
 
-		if (offset < 4)
+		if (offset < 4) {
+			// Offset 0 means that there are no data blocks or DTDs,
+			// so the remainder must be padding.
+			if (!memchk(x + 4, 127 - 4)) {
+				data_block = "Padding";
+				fail("Contains non-zero bytes.\n");
+			}
 			break;
+		}
 
 		if (version >= 3) {
 			unsigned i;
