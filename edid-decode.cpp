@@ -643,8 +643,13 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 			warn("DTD is similar but not identical to VIC %u.\n", vic);
 
 		if (cta_matches_vic(*t, vic) && has_cta &&
-		    !cta.preparsed_has_vic[0][vic])
+		    !cta.preparsed_has_vic[0][vic]) {
 			warn("DTD is identical to VIC %u, which is not present in the CTA Ext Block.\n", vic);
+
+			if (cta.preparsed_max_vic_pixclk_khz && t->pixclk_khz > 340000 &&
+			    t->pixclk_khz > cta.preparsed_max_vic_pixclk_khz)
+				cta.warn_about_hdmi_2x_dtd = true;
+		}
 
 		const timings *dmt_t = close_match_to_dmt(*t, dmt);
 		if (!vic_t && dmt_t)

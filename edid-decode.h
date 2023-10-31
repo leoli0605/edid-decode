@@ -190,6 +190,8 @@ struct edid_state {
 		cta.preparsed_total_vtdbs = 0;
 		cta.preparsed_has_t8vtdb = false;
 		cta.preparsed_t8vtdb_dmt = 0;
+		cta.preparsed_max_vic_pixclk_khz = 0;
+		cta.warn_about_hdmi_2x_dtd = false;
 
 		// DisplayID block state
 		dispid.version = 0;
@@ -310,6 +312,8 @@ struct edid_state {
 		unsigned short vics[256][2];
 		bool preparsed_has_vic[2][256];
 		std::vector<unsigned char> preparsed_svds[2];
+		unsigned preparsed_max_vic_pixclk_khz;
+		bool warn_about_hdmi_2x_dtd;
 	} cta;
 
 	// DisplayID block state

@@ -2807,6 +2807,12 @@ void edid_state::preparse_cta_block(unsigned char *x)
 					vic &= 0x7f;
 				cta.preparsed_svds[for_ycbcr420].push_back(vic);
 				cta.preparsed_has_vic[for_ycbcr420][vic] = true;
+
+				const struct timings *t = find_vic_id(vic);
+
+				if (!for_ycbcr420 && t &&
+				    t->pixclk_khz > cta.preparsed_max_vic_pixclk_khz)
+					cta.preparsed_max_vic_pixclk_khz = t->pixclk_khz;
 			}
 			break;
 		}
@@ -2995,6 +3001,14 @@ void edid_state::check_cta_blocks()
 	unsigned max_pref_ilace_vact = 0;
 
 	data_block = "CTA-861";
+
+	// HDMI 1.4 goes up to 340 MHz. Dubious to have a DTD above that,
+	// but no VICs. Displays often have a setting to turn off HDMI 2.x
+	// support, dropping any HDMI 2.x VICs, but they sometimes forget
+	// to replace the DTD in the base block as well.
+	if (cta.warn_about_hdmi_2x_dtd)
+		warn("DTD pixelclock indicates HDMI 2.x support, VICs indicate HDMI 1.x.\n");
+
 	for (vec_timings_ext::iterator iter = cta.preferred_timings.begin();
 	     iter != cta.preferred_timings.end(); ++iter) {
 		if (iter->t.interlaced &&
