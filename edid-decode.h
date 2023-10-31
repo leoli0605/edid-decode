@@ -351,7 +351,6 @@ struct edid_state {
 		return print_timings(prefix, &t.t, t.type.c_str(), t.flags.c_str(),
 				     detailed, do_checks);
 	};
-	bool match_timings(const timings &t1, const timings &t2);
 	timings calc_gtf_mode(unsigned h_pixels, unsigned v_lines,
 			      double ip_freq_rqd, bool int_rqd = false,
 			      enum gtf_ip_parm ip_parm = gtf_ip_vert_freq,
@@ -526,6 +525,7 @@ void calc_ratio(struct timings *t);
 const char *oui_name(unsigned oui, unsigned *ouinum = NULL);
 unsigned gcd(unsigned a, unsigned b);
 
+bool match_timings(const timings &t1, const timings &t2);
 bool timings_close_match(const timings &t1, const timings &t2);
 const struct timings *find_dmt_id(unsigned char dmt_id);
 const struct timings *close_match_to_dmt(const timings &t, unsigned &dmt);
@@ -533,6 +533,7 @@ const struct timings *find_vic_id(unsigned char vic);
 const struct cta_rid *find_rid(unsigned char rid);
 const struct timings *find_hdmi_vic_id(unsigned char hdmi_vic);
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic);
+bool cta_matches_vic(const timings &t, unsigned &vic);
 unsigned char hdmi_vic_to_vic(unsigned char hdmi_vic);
 char *extract_string(const unsigned char *x, unsigned len);
 

@@ -319,6 +319,20 @@ const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic)
 	return NULL;
 }
 
+bool cta_matches_vic(const timings &t, unsigned &vic)
+{
+	for (vic = 1; vic <= ARRAY_SIZE(edid_cta_modes1); vic++) {
+		if (match_timings(t, edid_cta_modes1[vic - 1]))
+			return true;
+	}
+	for (vic = 193; vic < ARRAY_SIZE(edid_cta_modes2) + 193; vic++) {
+		if (match_timings(t, edid_cta_modes1[vic - 193]))
+			return true;
+	}
+	vic = 0;
+	return false;
+}
+
 void edid_state::cta_list_vics()
 {
 	char type[16];

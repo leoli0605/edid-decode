@@ -306,7 +306,7 @@ std::string edid_state::dtd_type(unsigned cnt)
 	return buf;
 }
 
-bool edid_state::match_timings(const timings &t1, const timings &t2)
+bool match_timings(const timings &t1, const timings &t2)
 {
 	if (t1.hact != t2.hact ||
 	    t1.vact != t2.vact ||
@@ -637,8 +637,14 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 		unsigned vic, dmt;
 		const timings *vic_t = cta_close_match_to_vic(*t, vic);
 
+		// We report this even if there is no CTA block since it
+		// is still likely that the actual VIC timings were intended.
 		if (vic_t)
 			warn("DTD is similar but not identical to VIC %u.\n", vic);
+
+		if (cta_matches_vic(*t, vic) && has_cta &&
+		    !cta.preparsed_has_vic[0][vic])
+			warn("DTD is identical to VIC %u, which is not present in the CTA Ext Block.\n", vic);
 
 		const timings *dmt_t = close_match_to_dmt(*t, dmt);
 		if (!vic_t && dmt_t)
