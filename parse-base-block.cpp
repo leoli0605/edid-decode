@@ -1386,12 +1386,13 @@ void edid_state::parse_base_block(const unsigned char *x)
 	       manufacturer_name(x + 0x08),
 	       (unsigned short)(x[0x0a] + (x[0x0b] << 8)));
 	if (base.has_serial_number) {
+		unsigned sn = x[0x0c] + (x[0x0d] << 8) +
+			(x[0x0e] << 16) + (x[0x0f] << 24);
+
 		if (hide_serial_numbers)
 			printf("    Serial Number: ...\n");
 		else
-			printf("    Serial Number: %u\n",
-			       (unsigned)(x[0x0c] + (x[0x0d] << 8) +
-					  (x[0x0e] << 16) + (x[0x0f] << 24)));
+			printf("    Serial Number: %u (0x%08x)\n", sn, sn);
 	}
 
 	time(&the_time);
