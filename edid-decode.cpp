@@ -1001,6 +1001,8 @@ static bool extract_edid(int fd, FILE *error)
 		state.edid_size = 0;
 		return false;
 	}
+	// Ensure it is safely terminated by a 0 char
+	edid_data.push_back('\0');
 
 	const char *data = &edid_data[0];
 	const char *start;
@@ -1044,6 +1046,9 @@ static bool extract_edid(int fd, FILE *error)
 
 	if (i == 32)
 		return extract_edid_hex(data);
+
+	// Drop the extra '\0' byte since we now assume binary data
+	edid_data.pop_back();
 
 	/* Assume binary */
 	if (edid_data.size() > sizeof(edid)) {
