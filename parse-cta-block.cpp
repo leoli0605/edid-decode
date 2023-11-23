@@ -1234,7 +1234,7 @@ static const char *dsc_max_slices[] = {
 	"up to 8 slices and up to (340 MHz/Ksliceadjust) pixel clock per slice",
 	"up to 8 slices and up to (400 MHz/Ksliceadjust) pixel clock per slice",
 	"up to 12 slices and up to (400 MHz/Ksliceadjust) pixel clock per slice",
-	"up to 16 slices and up to (400 MHz/Ksliceadjust) pixel clock per slice",
+	"up to 12 slices and up to (600 MHz/Ksliceadjust) pixel clock per slice",
 };
 
 static void cta_hf_eeodb(const unsigned char *x, unsigned length)
@@ -1361,8 +1361,9 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 		if (max_slices < ARRAY_SIZE(dsc_max_slices)) {
 			printf("%s\n", dsc_max_slices[max_slices]);
 		} else {
-			printf("Unknown (0x%02x)\n", max_slices);
-			fail("Unknown DSC Max Slices (0x%02x).\n", max_slices);
+			printf("Unknown (%u), interpreted as: %s\n", max_slices,
+			       dsc_max_slices[7]);
+			warn("Unknown DSC Max Slices (%u).\n", max_slices);
 		}
 	}
 	if (x[8] & 0xf0) {
@@ -2704,6 +2705,8 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 			fail("HDMI Forum SCDB did not immediately follow the HDMI VSDB.\n");
 		if (cta.have_hf_scdb || cta.have_hf_vsdb)
 			fail("Duplicate HDMI Forum VSDB/SCDB.\n");
+		if (block_nr != 1)
+			fail("Data Block can only be present in Block 1.\n");
 		if (length < 2) {
 			data_block = std::string("HDMI Forum SCDB");
 			fail("Invalid length %u < 2.\n", length);
