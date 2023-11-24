@@ -1336,9 +1336,10 @@ void edid_state::preparse_base_block(unsigned char *x)
 {
 	bool update_checksum = false;
 
-	base.has_serial_number = x[0x0c] || x[0x0d] || x[0x0e] || x[0x0f];
+	base.serial_number = x[0x0c] + (x[0x0d] << 8) +
+			(x[0x0e] << 16) + (x[0x0f] << 24);
 
-	if (base.has_serial_number && replace_unique_ids) {
+	if (base.serial_number && replace_unique_ids) {
 		// Replace by 123456
 		x[0x0c] = 0x40;
 		x[0x0d] = 0xe2;
@@ -1385,14 +1386,27 @@ void edid_state::parse_base_block(const unsigned char *x)
 	printf("    Manufacturer: %s\n    Model: %u\n",
 	       manufacturer_name(x + 0x08),
 	       (unsigned short)(x[0x0a] + (x[0x0b] << 8)));
-	if (base.has_serial_number) {
-		unsigned sn = x[0x0c] + (x[0x0d] << 8) +
-			(x[0x0e] << 16) + (x[0x0f] << 24);
+	if (base.serial_number) {
+		unsigned sn = base.serial_number;
 
 		if (hide_serial_numbers)
 			printf("    Serial Number: ...\n");
 		else
 			printf("    Serial Number: %u (0x%08x)\n", sn, sn);
+
+		// This is a list of known dummy values that are often used in EDIDs:
+		switch (sn) {
+		case 1:
+		case 0x01010101:
+		case 1010101:
+		case 0x5445:
+		case 0x80000000:
+		case 20000080:
+		case 8888:
+		case 6666:
+			warn("The serial number is one of the known dummy values, it should probably be set to 0.\n");
+			break;
+		}
 	}
 
 	time(&the_time);

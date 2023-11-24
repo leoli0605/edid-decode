@@ -2938,7 +2938,7 @@ void edid_state::parse_cta_block(const unsigned char *x)
 	} while (0);
 
 	data_block.clear();
-	if (base.has_serial_number && base.has_serial_string)
+	if (base.serial_number && base.has_serial_string)
 		warn("Display Product Serial Number is set, so the Serial Number in the Base EDID should be 0.\n");
 	if (!cta.has_vic_1 && !base.has_640x480p60_est_timing)
 		fail("Required 640x480p60 timings are missing in the established timings"

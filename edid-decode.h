@@ -151,11 +151,12 @@ struct edid_state {
 		// Base block state
 		base.edid_minor = 0;
 		base.has_name_descriptor = base.has_display_range_descriptor =
-			base.has_serial_number = base.has_serial_string =
+			base.has_serial_string =
 			base.supports_continuous_freq = base.supports_gtf =
 			base.supports_cvt = base.seen_non_detailed_descriptor =
 			base.has_640x480p60_est_timing = base.has_spwg =
 			base.preferred_is_also_native = false;
+		base.serial_number = 0;
 		base.supports_sec_gtf = false;
 		base.sec_gtf_start_freq = 0;
 		base.C = base.M = base.K = base.J = 0;
@@ -243,7 +244,7 @@ struct edid_state {
 		unsigned edid_minor;
 		bool has_name_descriptor;
 		bool has_display_range_descriptor;
-		bool has_serial_number;
+		unsigned serial_number;
 		bool has_serial_string;
 		bool supports_continuous_freq;
 		bool supports_gtf;
