@@ -2103,18 +2103,27 @@ void edid_state::cta_sldb(const unsigned char *x, unsigned length)
 			channel_is_active |= 1U << (x[0] & 0x1f);
 			active_cnt++;
 		}
-		if ((x[1] & 0x1f) < ARRAY_SIZE(speaker_location))
-			printf("      Speaker: %s\n", speaker_location[x[1] & 0x1f].name);
+
+		unsigned speaker_id = x[1] & 0x1f;
+
+		if (speaker_id < ARRAY_SIZE(speaker_location)) {
+			printf("      Speaker ID: %s\n", speaker_location[speaker_id].name);
+		} else if (speaker_id == 0x1f) {
+			printf("      Speaker ID: None Specified\n");
+		} else {
+			printf("      Speaker ID: Reserved (%u)\n", speaker_id);
+			fail("Reserved Speaker ID specified.\n");
+		}
 		if (length >= 5 && (x[0] & 0x40)) {
 			printf("      X: %.3f * Xmax\n", decode_uchar_as_double(x[2]));
 			printf("      Y: %.3f * Ymax\n", decode_uchar_as_double(x[3]));
 			printf("      Z: %.3f * Zmax\n", decode_uchar_as_double(x[4]));
 			length -= 3;
 			x += 3;
-		} else {
-			printf("      X: %.3f * Xmax (approximately)\n", speaker_location[x[1] & 0x1f].x);
-			printf("      Y: %.3f * Ymax (approximately)\n", speaker_location[x[1] & 0x1f].y);
-			printf("      Z: %.3f * Zmax (approximately)\n", speaker_location[x[1] & 0x1f].z);
+		} else if (speaker_id < ARRAY_SIZE(speaker_location)) {
+			printf("      X: %.3f * Xmax (approximately)\n", speaker_location[speaker_id].x);
+			printf("      Y: %.3f * Ymax (approximately)\n", speaker_location[speaker_id].y);
+			printf("      Z: %.3f * Zmax (approximately)\n", speaker_location[speaker_id].z);
 		}
 
 		length -= 2;
