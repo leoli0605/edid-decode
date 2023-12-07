@@ -1121,6 +1121,7 @@ bool edid_state::preparse_detailed_block(unsigned char *x)
 		}
 		break;
 	case 0xff:
+		strcpy(base.serial_string, extract_string(x + 5, 13));
 		if (replace_unique_ids) {
 			// Replace with 123456
 			static const unsigned char sernum[13] = {
@@ -1302,6 +1303,22 @@ void edid_state::detailed_block(const unsigned char *x)
 		}
 		return;
 	case 0xff: {
+		static const char * const dummy_sn[] = {
+			"na",
+			"n/a",
+			"NA",
+			"Serial Number",
+			"SerialNumber",
+			"Serial_Number",
+			"121212121212",
+			"1234567890123",
+			"20000080",
+			"SN-000000001",
+			"demoset-1",
+			"H1AK500000", // Often used with Samsung displays
+			NULL
+		};
+
 		data_block = "Display Product Serial Number";
 		char *sn = extract_string(x + 5, 13);
 		if (hide_serial_numbers)
@@ -1309,6 +1326,24 @@ void edid_state::detailed_block(const unsigned char *x)
 		else
 			printf("    %s: '%s'\n", data_block.c_str(), sn);
 		base.has_serial_string = 1;
+		bool dummy = true;
+		// Any serial numbers consisting only of spaces, 0, and/or 1
+		// characters are always considered dummy values.
+		for (unsigned i = 0; i < strlen(base.serial_string); i++) {
+			if (!strchr(" 01", base.serial_string[i])) {
+				dummy = false;
+				break;
+			}
+		}
+		// In addition, check against a list of known dummy S/Ns
+		for (unsigned i = 0; !dummy && dummy_sn[i]; i++) {
+			if (!strcmp(base.serial_string, dummy_sn[i])) {
+				dummy = true;
+				break;
+			}
+		}
+		if (dummy && base.serial_string[0])
+			warn("The serial number is one of the known dummy values, is that intended?\n");
 		return;
 	}
 	default:
