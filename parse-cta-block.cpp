@@ -1009,8 +1009,10 @@ void edid_state::cta_hdmi_block(const unsigned char *x, unsigned length)
 	if (length < 4)
 		return;
 
-	printf("    Maximum TMDS clock: %u MHz\n", x[3] * 5);
-	if (x[3] * 5 > 340)
+	unsigned rate = x[3] * 5;
+	printf("    Maximum TMDS clock: %u MHz\n", rate);
+	cta.hdmi_max_rate = rate;
+	if (rate > 340)
 		fail("HDMI VSDB Max TMDS rate is > 340.\n");
 
 	if (length < 5)
@@ -1250,7 +1252,7 @@ static void cta_hf_eeodb(const unsigned char *x, unsigned length)
 		fail("Extension Block Count == %u.\n", x[0]);
 }
 
-static void cta_hf_scdb(const unsigned char *x, unsigned length)
+void edid_state::cta_hf_scdb(const unsigned char *x, unsigned length)
 {
 	unsigned rate = x[1] * 5;
 	unsigned v;
@@ -1260,6 +1262,10 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 		printf("    Maximum TMDS Character Rate: %u MHz\n", rate);
 		if (rate <= 340 || rate > 600)
 			fail("Max TMDS rate is > 0 and <= 340 or > 600.\n");
+		if (rate < cta.hdmi_max_rate)
+			fail("HDMI Forum VSDB rate < HDMI VSDB rate.\n");
+		else
+			cta.hdmi_max_rate = rate;
 	}
 	if (x[2] & 0x80)
 		printf("    SCDC Present\n");
@@ -1291,6 +1297,12 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 			fail("Max Fixed Rate Link is 1, but Max TMDS rate < 300.\n");
 		else if (max_frl_rate >= 2 && rate < 600)
 			fail("Max Fixed Rate Link is >= 2, but Max TMDS rate < 600.\n");
+
+		// FIXME:
+		// Currently I do not really know how to translate the
+		// Max FRL value to an equivalent max clock frequency.
+		// So reset this field to 0 to skip any clock rate checks.
+		cta.hdmi_max_rate = 0;
 	}
 	if (x[3] & 0x08)
 		printf("    Supports UHD VIC\n");
@@ -3030,6 +3042,10 @@ void edid_state::check_cta_blocks()
 	// to replace the DTD in the base block as well.
 	if (cta.warn_about_hdmi_2x_dtd)
 		warn("DTD pixelclock indicates HDMI 2.x support, VICs indicate HDMI 1.x.\n");
+
+	if (cta.hdmi_max_rate && max_pixclk_khz > cta.hdmi_max_rate * 1000)
+		fail("The maximum HDMI TMDS clock is %u kHz, but one or more video timings go up to %u kHz.\n",
+		     cta.hdmi_max_rate * 1000, max_pixclk_khz);
 
 	for (vec_timings_ext::iterator iter = cta.preferred_timings.begin();
 	     iter != cta.preferred_timings.end(); ++iter) {

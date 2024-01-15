@@ -176,6 +176,7 @@ struct edid_state {
 			cta.has_nvrdb = false;
 		cta.previous_cta_tag = 0xfff;
 		cta.have_hf_vsdb = cta.have_hf_scdb = false;
+		cta.hdmi_max_rate = 0;
 		cta.hf_eeodb_blocks = 0;
 		cta.image_width = cta.image_height = 0;
 		cta.block_number = 0;
@@ -297,6 +298,7 @@ struct edid_state {
 		bool first_svd_might_be_preferred;
 		unsigned char byte3;
 		bool has_hdmi;
+		unsigned hdmi_max_rate;
 		bool has_vcdb;
 		bool has_vfpdb;
 		bool has_nvrdb;
@@ -409,6 +411,7 @@ struct edid_state {
 	void cta_preparse_sldb(const unsigned char *x, unsigned length);
 	void cta_colorimetry_block(const unsigned char *x, unsigned length);
 	void cta_hdmi_block(const unsigned char *x, unsigned length);
+	void cta_hf_scdb(const unsigned char *x, unsigned length);
 	void cta_displayid_type_7(const unsigned char *x, unsigned length);
 	void cta_displayid_type_8(const unsigned char *x, unsigned length);
 	void cta_displayid_type_10(const unsigned char *x, unsigned length);
