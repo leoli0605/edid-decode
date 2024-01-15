@@ -1486,7 +1486,7 @@ int edid_state::parse_edid()
 	block = "";
 	block_nr = EDID_MAX_BLOCKS;
 
-	if (has_cta)
+	if (cta.has_svrs)
 		cta_resolve_svrs();
 
 	if (options[OptPreferredTimings])

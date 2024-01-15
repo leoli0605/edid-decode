@@ -179,6 +179,7 @@ struct edid_state {
 		cta.hf_eeodb_blocks = 0;
 		cta.image_width = cta.image_height = 0;
 		cta.block_number = 0;
+		cta.has_svrs = false;
 		cta.first_svd = true;
 		cta.supported_hdmi_vic_codes = cta.supported_hdmi_vic_vsb_codes = 0;
 		memset(cta.vics, 0, sizeof(cta.vics));
@@ -309,6 +310,7 @@ struct edid_state {
 		bool have_hf_vsdb, have_hf_scdb;
 		unsigned hf_eeodb_blocks;
 		unsigned block_number;
+		bool has_svrs;
 		bool first_svd;
 		unsigned supported_hdmi_vic_codes;
 		unsigned supported_hdmi_vic_vsb_codes;

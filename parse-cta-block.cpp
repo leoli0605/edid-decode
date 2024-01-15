@@ -853,6 +853,7 @@ void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 		} else {
 			printf("    %s\n", suffix);
 			vec_tim.push_back(timings_ext(svr, suffix));
+			cta.has_svrs = true;
 		}
 	} else if (svr >= 145 && svr <= 160) {
 		sprintf(suffix, "VTDB %3u", svr - 144);
@@ -862,6 +863,7 @@ void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 		} else {
 			printf("    %s\n", suffix);
 			vec_tim.push_back(timings_ext(svr, suffix));
+			cta.has_svrs = true;
 		}
 	} else if (svr >= 161 && svr <= 175) {
 		sprintf(suffix, "RID %u@%up",
@@ -872,6 +874,7 @@ void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 		} else {
 			printf("    %s\n", suffix);
 			vec_tim.push_back(timings_ext(svr, suffix));
+			cta.has_svrs = true;
 		}
 	} else if (svr == 254) {
 		sprintf(suffix, "T8VTDB");
@@ -882,6 +885,7 @@ void edid_state::cta_print_svr(unsigned char svr, vec_timings_ext &vec_tim)
 			sprintf(suffix, "DMT 0x%02x", cta.preparsed_t8vtdb_dmt);
 			printf("    %s\n", suffix);
 			vec_tim.push_back(timings_ext(svr, suffix));
+			cta.has_svrs = true;
 		}
 	}
 }
@@ -2968,9 +2972,13 @@ void edid_state::cta_resolve_svr(timings_ext &t_ext)
 		add_str(t_ext.flags, ">=CTA-861-H");
 		t_ext.t = cta.t8vtdb.t;
 	} else if (t_ext.svr() <= 144) {
+		if (t_ext.svr() < 129 || t_ext.svr() - 129 >= cta.vec_dtds.size())
+			return;
 		t_ext.flags = cta.vec_dtds[t_ext.svr() - 129].flags;
 		t_ext.t = cta.vec_dtds[t_ext.svr() - 129].t;
 	} else if (t_ext.svr() <= 160) {
+		if (t_ext.svr() - 145 >= cta.vec_vtdbs.size())
+			return;
 		t_ext.flags = cta.vec_vtdbs[t_ext.svr() - 145].flags;
 		add_str(t_ext.flags, ">=CTA-861-H");
 		t_ext.t = cta.vec_vtdbs[t_ext.svr() - 145].t;
