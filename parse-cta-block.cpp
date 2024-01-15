@@ -1310,8 +1310,10 @@ static void cta_hf_scdb(const unsigned char *x, unsigned length)
 		printf("    Supports QMS\n");
 	if (x[4] & 0x20)
 		printf("    Supports Mdelta\n");
-	if (x[4] & 0x10)
-		printf("    Supports media rates below VRRmin (CinemaVRR)\n");
+	if (x[4] & 0x10) {
+		printf("    Supports media rates below VRRmin (CinemaVRR, deprecated)\n");
+		warn("CinemaVRR is deprecated and must be cleared.\n");
+	}
 	if (x[4] & 0x08)
 		printf("    Supports negative Mvrr values\n");
 	if (x[4] & 0x04)
