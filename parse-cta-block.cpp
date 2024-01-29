@@ -2917,6 +2917,7 @@ void edid_state::parse_cta_block(const unsigned char *x)
 
 					sprintf(type, "DTD %3u", i + 1);
 					cta.native_timings.push_back(timings_ext(i + 129, type));
+					cta.has_svrs = true;
 				}
 				if (cta.has_hdmi && block_nr != (block_map.saw_block_1 ? 2 : 1))
 					fail("The HDMI Specification requires that the first Extension Block (that is not a Block Map) is an CTA-861 Extension Block.\n");
