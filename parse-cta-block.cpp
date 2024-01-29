@@ -2764,14 +2764,18 @@ void edid_state::preparse_cta_block(unsigned char *x)
 	unsigned offset = x[2];
 
 	if (offset >= 4) {
-		const unsigned char *detailed;
+		unsigned char *detailed;
+		bool update_checksum = false;
 
 		for (detailed = x + offset; detailed + 17 < x + 127; detailed += 18) {
 			if (memchk(detailed, 18))
 				break;
+			update_checksum |= preparse_detailed_block(detailed);
 			if (detailed[0] || detailed[1])
 				cta.preparsed_total_dtds++;
 		}
+		if (update_checksum)
+			replace_checksum(x, EDID_PAGE_SIZE);
 	}
 
 	if (version < 3)
@@ -2966,7 +2970,7 @@ void edid_state::parse_cta_block(const unsigned char *x)
 	} while (0);
 
 	data_block.clear();
-	if (base.serial_number && base.has_serial_string)
+	if (base.serial_number && serial_strings.size())
 		warn("Display Product Serial Number is set, so the Serial Number in the Base EDID should be 0.\n");
 	if (!cta.has_vic_1 && !base.has_640x480p60_est_timing)
 		fail("Required 640x480p60 timings are missing in the established timings"

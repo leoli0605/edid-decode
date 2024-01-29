@@ -1119,7 +1119,9 @@ bool edid_state::preparse_detailed_block(unsigned char *x)
 		}
 		break;
 	case 0xff:
-		strcpy(base.serial_string, extract_string(x + 5, 13));
+		data_block = "Display Product Serial Number";
+		serial_strings.push_back(extract_string(x + 5, 13));
+		data_block.clear();
 		if (replace_unique_ids) {
 			// Replace with 123456
 			static const unsigned char sernum[13] = {
@@ -1318,29 +1320,30 @@ void edid_state::detailed_block(const unsigned char *x)
 		};
 
 		data_block = "Display Product Serial Number";
-		char *sn = extract_string(x + 5, 13);
+		const char *sn = serial_strings[serial_string_cnt++].c_str();
 		if (hide_serial_numbers)
 			printf("    %s: ...\n", data_block.c_str());
+		else if (replace_unique_ids)
+			printf("    %s: '123456'\n", data_block.c_str());
 		else
 			printf("    %s: '%s'\n", data_block.c_str(), sn);
-		base.has_serial_string = 1;
 		bool dummy = true;
 		// Any serial numbers consisting only of spaces, 0, and/or 1
 		// characters are always considered dummy values.
-		for (unsigned i = 0; i < strlen(base.serial_string); i++) {
-			if (!strchr(" 01", base.serial_string[i])) {
+		for (unsigned i = 0; i < strlen(sn); i++) {
+			if (!strchr(" 01", sn[i])) {
 				dummy = false;
 				break;
 			}
 		}
 		// In addition, check against a list of known dummy S/Ns
 		for (unsigned i = 0; !dummy && dummy_sn[i]; i++) {
-			if (!strcmp(base.serial_string, dummy_sn[i])) {
+			if (!strcmp(sn, dummy_sn[i])) {
 				dummy = true;
 				break;
 			}
 		}
-		if (dummy && base.serial_string[0])
+		if (dummy && sn[0])
 			warn("The serial number is one of the known dummy values, is that intended?\n");
 		return;
 	}
@@ -1815,4 +1818,7 @@ void edid_state::check_base_block(const unsigned char *x)
 		fail("EDID 1.3 requires a Block Map Extension in Block 128 if there are more than 128 blocks in the EDID.\n");
 	if (block_map.saw_block_128 && num_blocks > 255)
 		fail("If there is a Block Map Extension in Block 128 then the maximum number of blocks is 255.\n");
+
+	if (serial_strings.size() > 1)
+		warn("Multiple Display Product Serial Numbers are specified, is that intended?\n");
 }

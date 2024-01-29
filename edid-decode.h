@@ -147,17 +147,17 @@ struct edid_state {
 		hide_serial_numbers = false;
 		replace_unique_ids = false;
 		image_width = image_height = diagonal = 0;
+		serial_string_cnt = 0;
+		serial_strings.clear();
 
 		// Base block state
 		base.edid_minor = 0;
 		base.has_name_descriptor = base.has_display_range_descriptor =
-			base.has_serial_string =
 			base.supports_continuous_freq = base.supports_gtf =
 			base.supports_cvt = base.seen_non_detailed_descriptor =
 			base.has_640x480p60_est_timing = base.has_spwg =
 			base.preferred_is_also_native = false;
 		base.serial_number = 0;
-		base.serial_string[0] = 0;
 		base.supports_sec_gtf = false;
 		base.sec_gtf_start_freq = 0;
 		base.C = base.M = base.K = base.J = 0;
@@ -225,6 +225,8 @@ struct edid_state {
 	bool has_dispid;
 	bool hide_serial_numbers;
 	bool replace_unique_ids;
+	std::vector<std::string> serial_strings;
+	unsigned serial_string_cnt;
 
 	unsigned min_hor_freq_hz;
 	unsigned max_hor_freq_hz;
@@ -248,8 +250,6 @@ struct edid_state {
 		bool has_name_descriptor;
 		bool has_display_range_descriptor;
 		unsigned serial_number;
-		char serial_string[14];
-		bool has_serial_string;
 		bool supports_continuous_freq;
 		bool supports_gtf;
 		bool supports_sec_gtf;
