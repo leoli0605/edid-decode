@@ -253,14 +253,17 @@ the start.
 .TP
 \fB\-\-replace\-unique\-ids\fR
 Replaces any unique IDs in the EDID by fixed values. Serial numbers will be
-replaced by '123456' and Container IDs by all zeroes. This will
-also update any checksums in the EDID and update the EDID hex dump at
-the start of the output. Note that since this will update checksums, any
-checksum errors present in the original EDID will no longer be detected.
+replaced by '123456', Container IDs by all zeroes and the 'Made in' date by
+the year 2000. This will also update any checksums in the EDID and update
+the EDID hex dump at the start of the output. Note that since this will
+update checksums, any checksum errors present in the original EDID will
+no longer be detected.
 
-Serial numbers can appear in the Base Block, DisplayID Extension Blocks and
-Localized String Extension Blocks. Container IDs can appear in the DisplayID
-and CTA-861 Extension Blocks.
+Serial numbers can appear in the Base Block, CTA-861 Extension Blocks,
+DisplayID Extension Blocks and Localized String Extension Blocks.
+Container IDs can appear in the DisplayID and CTA-861 Extension Blocks.
+
+The 'Made in' date appears in the Base Block.
 .TP
 \fB\-\-version\fR
 Show the SHA hash and the last commit date.

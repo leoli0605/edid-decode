@@ -1384,6 +1384,14 @@ void edid_state::preparse_base_block(unsigned char *x)
 		update_checksum = true;
 	}
 
+	base.week = x[0x10];
+	base.year = x[0x11];
+	if (replace_unique_ids && base.week != 0xff) {
+		x[0x10] = 0;
+		x[0x11] = 10;
+		update_checksum = true;
+	}
+
 	/*
 	 * Need to find the Display Range Limit info before reading
 	 * the standard timings.
@@ -1448,8 +1456,8 @@ void edid_state::parse_base_block(const unsigned char *x)
 	time(&the_time);
 	ptm = localtime(&the_time);
 
-	unsigned char week = x[0x10];
-	int year = 1990 + x[0x11];
+	unsigned char week = base.week;
+	int year = 1990 + base.year;
 
 	if (week) {
 		if (base.edid_minor <= 3 && week == 0xff)
@@ -1459,16 +1467,19 @@ void edid_state::parse_base_block(const unsigned char *x)
 		if (base.edid_minor <= 3 && week == 54)
 			fail("EDID 1.3 does not support week 54.\n");
 		if (week != 0xff && week > 54)
-			fail("Invalid week %u of manufacture.\n", week);
-		if (week != 0xff)
-			printf("    Made in: week %hhu of %d\n", week, year);
+			fail("Invalid week of manufacture (> 54).\n");
 	}
+	if (year - 1 > ptm->tm_year + 1900)
+		fail("The year is more than one year in the future.\n");
+
 	if (week == 0xff)
 		printf("    Model year: %d\n", year);
-	else if (!week)
+	else if (replace_unique_ids)
+		printf("    Made in: 2000\n");
+	else if (week)
+		printf("    Made in: week %hhu of %d\n", week, year);
+	else
 		printf("    Made in: %d\n", year);
-	if (year - 1 > ptm->tm_year + 1900)
-		fail("The year %d is more than one year in the future.\n", year);
 
 	/* display section */
 

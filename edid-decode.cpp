@@ -148,7 +148,7 @@ static void usage(void)
 	       "  -H, --only-hex-dump   Only output the hex dump of the EDID.\n"
 	       "  --skip-sha            Skip the SHA report.\n"
 	       "  --hide-serial-numbers Hide serial numbers with '...'.\n"
-	       "  --replace-unique-ids  Replace unique IDs (serial numbers, Container IDs) with fixed values.\n"
+	       "  --replace-unique-ids  Replace unique IDs (serial numbers, dates, Container IDs) with fixed values.\n"
 	       "  --version             Show the edid-decode version (SHA).\n"
 	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"

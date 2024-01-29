@@ -1709,6 +1709,11 @@ void edid_state::preparse_displayid_block(unsigned char *x)
 				x[offset + 0x0b] = 0x00;
 				update_checksum = true;
 			}
+			if (replace_unique_ids && x[offset + 0x0c] != 0xff) {
+				x[offset + 0x0c] = 0;
+				x[offset + 0x0d] = 0;
+				update_checksum = true;
+			}
 			break;
 		case 0x12:
 		case 0x28:
