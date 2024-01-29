@@ -493,29 +493,27 @@ void edid_state::detailed_cvt_descriptor(const char *prefix, const unsigned char
 char *extract_string(const unsigned char *x, unsigned len)
 {
 	static char s[EDID_PAGE_SIZE];
-	int seen_newline = 0;
+	bool seen_newline = false;
 	unsigned i;
 
 	memset(s, 0, sizeof(s));
 
 	for (i = 0; i < len; i++) {
-		if (isgraph(x[i])) {
-			s[i] = x[i];
-		} else if (!seen_newline) {
-			if (x[i] == 0x0a) {
-				seen_newline = 1;
-				if (!i)
-					fail("Empty string.\n");
-				else if (s[i - 1] == 0x20)
-					fail("One or more trailing spaces.\n");
-			} else if (x[i] == 0x20) {
-				s[i] = x[i];
-			} else {
-				fail("Non-printable character.\n");
+		if (seen_newline) {
+			if (x[i] != 0x20) {
+				fail("Non-space after newline.\n");
 				return s;
 			}
-		} else if (x[i] != 0x20) {
-			fail("Non-space after newline.\n");
+		} else if (isgraph(x[i]) || x[i] == 0x20) {
+			s[i] = x[i];
+		} else if (x[i] == 0x0a) {
+			seen_newline = true;
+			if (!i)
+				fail("Empty string.\n");
+			else if (s[i - 1] == 0x20)
+				fail("One or more trailing spaces.\n");
+		} else {
+			fail("Non-printable character.\n");
 			return s;
 		}
 	}
