@@ -1,0 +1,40 @@
+name: Sync EDID Decode Repository
+
+on:
+  schedule:
+    # At 00:00 on day-of-month 1.
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Configure user name and email
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Sync with remote EDID Decode repository
+        run: |
+          # 添加远程仓库
+          git remote add edid-decode git://linuxtv.org/edid-decode.git
+          # 获取远程仓库的数据
+          git fetch edid-decode
+          # 切换到主分支
+          git checkout main
+          # 将远程仓库的 main 分支合并到当前仓库的 main 分支
+          git merge edid-decode/master
+          # 推送更新到当前仓库
+          git push
+
+      - name: Cleanup
+        if: always()
+        run: |
+          git remote remove edid-decode
