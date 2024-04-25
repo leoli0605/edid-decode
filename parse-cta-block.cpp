@@ -1790,6 +1790,7 @@ static const char *speaker_map[] = {
 	"FLc/FRc - Front Left/Right of Center",
 	"RLC/RRC - Rear Left/Right of Center (Deprecated)",
 	"FLw/FRw - Front Left/Right Wide",
+
 	"TpFL/TpFR - Top Front Left/Right",
 	"TpC - Top Center",
 	"TpFC - Top Front Center",
@@ -1798,6 +1799,7 @@ static const char *speaker_map[] = {
 	"TpBC - Top Back Center",
 	"SiL/SiR - Side Left/Right",
 	"TpSiL/TpSiR - Top Side Left/Right",
+
 	"TpBL/TpBR - Top Back Left/Right",
 	"BtFC - Bottom Front Center",
 	"BtFL/BtFR - Bottom Front Left/Right",
@@ -1807,6 +1809,7 @@ static const char *speaker_map[] = {
 
 static void cta_sadb(const unsigned char *x, unsigned length)
 {
+	unsigned sad_deprecated = 0x7f000;
 	unsigned sad;
 	unsigned i;
 
@@ -1818,9 +1821,14 @@ static void cta_sadb(const unsigned char *x, unsigned length)
 	sad = ((x[2] << 16) | (x[1] << 8) | x[0]);
 
 	for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+		bool deprecated = sad_deprecated & (1 << i);
+
 		if ((sad >> i) & 1)
-			printf("    %s\n", speaker_map[i]);
+			printf("    %s%s\n", speaker_map[i],
+			       deprecated ? " (Deprecated, use the RCDB)" : "");
 	}
+	if (sad & 0xff040)
+		warn("Specifies deprecated speakers.\n");
 }
 
 static void cta_vesa_dtcdb(const unsigned char *x, unsigned length)
