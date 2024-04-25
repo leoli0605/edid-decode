@@ -174,7 +174,7 @@ struct edid_state {
 		// CTA-861 block state
 		cta.has_vic_1 = cta.first_svd_might_be_preferred = cta.has_sldb =
 			cta.has_hdmi = cta.has_vcdb = cta.has_vfpdb = cta.has_cdb =
-			cta.has_nvrdb = false;
+			cta.has_nvrdb = cta.has_pidb = false;
 		cta.previous_cta_tag = 0xfff;
 		cta.have_hf_vsdb = cta.have_hf_scdb = false;
 		cta.hdmi_max_rate = 0;
@@ -309,6 +309,7 @@ struct edid_state {
 		bool preparsed_sld_has_coord;
 		bool preparsed_sld;
 		bool has_sldb;
+		bool has_pidb;
 		unsigned short preparsed_phys_addr;
 		unsigned previous_cta_tag;
 		bool have_hf_vsdb, have_hf_scdb;
@@ -410,6 +411,7 @@ struct edid_state {
 	cta_vfd cta_parse_vfd(const unsigned char *x, unsigned lvfd);
 	void cta_rcdb(const unsigned char *x, unsigned length);
 	void cta_sldb(const unsigned char *x, unsigned length);
+	void cta_pidb(const unsigned char *x, unsigned length);
 	void cta_preparse_sldb(const unsigned char *x, unsigned length);
 	void cta_colorimetry_block(const unsigned char *x, unsigned length);
 	void cta_hdmi_block(const unsigned char *x, unsigned length);

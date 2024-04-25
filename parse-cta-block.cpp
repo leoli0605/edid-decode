@@ -2434,6 +2434,30 @@ static void cta_ifdb(const unsigned char *x, unsigned length)
 	}
 }
 
+void edid_state::cta_pidb(const unsigned char *x, unsigned length)
+{
+	if (length < 4) {
+		fail("Empty Data Block with length %u.\n", length);
+		return;
+	}
+	unsigned oui = (x[0] << 16) | (x[1] << 8) | x[2];
+	printf("    IEEE CID/OUI: %s\n", ouitohex(oui).c_str());
+	if (length == 4)
+		return;
+	printf("    Version: %u\n", x[3]);
+	if (x[3])
+		fail("Unsupported version %u.\n", x[3]);
+	if (length == 5)
+		return;
+	char pn[26];
+	memcpy(pn, x + 4, length - 5);
+	pn[length - 5] = 0;
+	for (unsigned i = 0; i < length - 5; i++)
+		if (x[4 + i] < 0x20 || x[4 + i] >= 0x80)
+			fail("Product Name: invalid ASCII value at position %u.\n", i);
+	printf("    Product Name: %s\n", pn);
+}
+
 void edid_state::cta_displayid_type_7(const unsigned char *x, unsigned length)
 {
 	check_displayid_datablock_revision(x[0], 0x00, 2);
@@ -2606,6 +2630,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x714: data_block = "Speaker Location Data Block"; audio_block = true; break;
 
 	case 0x720: data_block = "InfoFrame Data Block"; break;
+	case 0x721: data_block = "Product Information Data Block"; break;
 
 	case 0x722: data_block = "DisplayID Type VII Video Timing Data Block"; break;
 	case 0x723: data_block = "DisplayID Type VIII Video Timing Data Block"; break;
@@ -2659,6 +2684,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x70f:
 	case 0x712:
 	case 0x713:
+	case 0x721:
 	case 0x778:
 	case 0x779:
 	case 0x77a:
@@ -2719,6 +2745,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x713: cta_rcdb(x, length); break;
 	case 0x714: cta_sldb(x, length); break;
 	case 0x720: cta_ifdb(x, length); break;
+	case 0x721: cta_pidb(x, length); break;
 	case 0x722: cta_displayid_type_7(x, length); break;
 	case 0x723: cta_displayid_type_8(x, length); break;
 	case 0x72a: cta_displayid_type_10(x, length); break;
@@ -2812,6 +2839,8 @@ void edid_state::preparse_cta_block(unsigned char *x)
 				cta.has_cdb = true;
 			else if (x[i + 1] == 0x08)
 				cta.has_nvrdb = true;
+			else if (x[i + 1] == 0x21)
+				cta.has_pidb = true;
 			else if (x[i + 1] == 0x13 && (x[i + 2] & 0x40)) {
 				cta.preparsed_speaker_count = 1 + (x[i + 2] & 0x1f);
 				cta.preparsed_sld = x[i + 2] & 0x20;
