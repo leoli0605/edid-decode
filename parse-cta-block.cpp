@@ -2512,8 +2512,8 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 		if (length > 4) {
 			unsigned format = x[0] & 0xf;
 
-			printf("    %s, max channels %u\n", audio_format(format).c_str(),
-			       (x[1] & 0x1f)+1);
+			printf("    %s:\n", audio_format(format).c_str());
+			printf("      Max channels: %u\n", (x[1] & 0x1f)+1);
 			printf("      Supported sample rates (kHz):%s%s%s%s%s%s%s\n",
 			       (x[2] & 0x40) ? " 192" : "",
 			       (x[2] & 0x20) ? " 176.4" : "",
