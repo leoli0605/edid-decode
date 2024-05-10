@@ -6,9 +6,9 @@ To build this do:
 
 git clone git://linuxtv.org/edid-decode.git
 cd edid-decode
-meson setup _build
-meson compile -C _build
-meson install -C _build
+meson setup build
+meson compile -C build
+meson install -C build
 
 Patches and bug reports can be sent to the linux-media@vger.kernel.org
 mailinglist (see https://www.linuxtv.org/lists.php). Please make sure
@@ -49,16 +49,15 @@ This is updated regularly with the latest edid-decode. It uses emscripten
 and the html file is maintained in the emscripten directory of edid-decode.
 To build it, set the project up using the provided crossfile:
 
-	meson setup _build-wasm \
-		--cross-file ./emscripten/wasm-crossfile.txt \
-		--prefix=$(pwd)/_install-wasm
-	meson install _build-wasm
+	meson setup build-wasm --cross-file ./emscripten/wasm-crossfile.txt --prefix=$(pwd)/install-wasm
+	meson install -C build-wasm
 	# serve the files using a local webserver
-	cd _install-wasm/bin
+	cd install-wasm/bin
 	python3 -m http.server
 
 This assumes that emscripten is installed, of course. The location of the
-toolchain can be adjusted in emscripten/wasm-crossfile.txt.
+toolchain can be adjusted in emscripten/wasm-crossfile.txt. Currently
+it assumes that the emscripten tools are in your $PATH.
 See also https://emscripten.org/docs/getting_started/Tutorial.html and
 https://mesonbuild.com/Cross-compilation.html.
 

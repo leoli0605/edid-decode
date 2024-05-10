@@ -1,8 +1,8 @@
 [binaries]
-c = '/usr/lib/emscripten/emcc'
-cpp = '/usr/lib/emscripten/em++'
-ar = '/usr/lib/emscripten/emar'
-strip = '/usr/lib/emscripten/emstrip'
+c = 'emcc'
+cpp = 'em++'
+ar = 'emar'
+strip = 'emstrip'
 
 [built-in options]
 default_library = 'static'
