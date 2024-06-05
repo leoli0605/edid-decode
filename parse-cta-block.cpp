@@ -2498,10 +2498,13 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 		fail("Empty Data Block with length %u.\n", length);
 		return;
 	}
-	if (x[0] & 3)
+	if (x[0] & 3) {
 		printf("    Max Stream Count: %u\n", (x[0] & 3) + 1);
-	if (x[0] & 4)
-		printf("    Supports MS NonMixed\n");
+		if (x[0] & 4)
+			printf("    Supports MS NonMixed\n");
+	} else if (x[0] & 4) {
+		fail("MS NonMixed support indicated but Max Stream Count == 0.\n");
+	}
 
 	num_descs = x[1] & 7;
 	if (num_descs == 0)
