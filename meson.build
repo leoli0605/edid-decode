@@ -7,6 +7,7 @@ edid_decode_args = [
 	'-Wno-missing-field-initializers',
 	'-Wno-unused-parameter',
 	'-Wimplicit-fallthrough',
+	'-Wno-variadic-macros',
 ]
 edid_decode_link_args = []
 
