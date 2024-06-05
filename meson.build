@@ -46,8 +46,7 @@ if target_machine.system() == 'emscripten'
 	endforeach
 endif
 
-edid_decode = executable(
-	'edid-decode',
+edid_decode_sources = [
 	'calc-gtf-cvt.cpp',
 	'calc-ovt.cpp',
 	'edid-decode.cpp',
@@ -57,9 +56,14 @@ edid_decode = executable(
 	'parse-displayid-block.cpp',
 	'parse-ls-ext-block.cpp',
 	'parse-vtb-ext-block.cpp',
-	cpp_args : edid_decode_args,
+]
+
+edid_decode = executable(
+	'edid-decode',
+	sources: edid_decode_sources,
+	cpp_args: edid_decode_args,
 	link_args: edid_decode_link_args,
-	install : true,
+	install: true,
 )
 
 install_man('edid-decode.1')
