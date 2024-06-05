@@ -66,4 +66,9 @@ edid_decode = executable(
 	install: true,
 )
 
+meson.override_find_program(
+	'edid-decode',
+	edid_decode,
+)
+
 install_man('edid-decode.1')
