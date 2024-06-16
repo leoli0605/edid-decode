@@ -1613,7 +1613,7 @@ static std::string display_use_case(unsigned char x)
 	default: break;
 	}
 	fail("Unknown Display product primary use case 0x%02x.\n", x);
-	return std::string("Unknown display use case (") + utohex(x) + ")";
+	return "Unknown";
 }
 
 static void cta_microsoft(const unsigned char *x, unsigned length)
@@ -1626,7 +1626,7 @@ static void cta_microsoft(const unsigned char *x, unsigned length)
 		printf("    Desktop Usage: %u\n", (x[1] >> 6) & 1);
 		printf("    Third-Party Usage: %u\n", (x[1] >> 5) & 1);
 	}
-	printf("    Display Product Primary Use Case: %u (%s)\n", x[1] & 0x1f,
+	printf("    Display Product Primary Use Case: %s\n",
 	       display_use_case(x[1] & 0x1f).c_str());
 	printf("    Container ID: %s\n", containerid2s(x + 2).c_str());
 }
