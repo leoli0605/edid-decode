@@ -1412,6 +1412,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 	int analog;
 	unsigned col_x, col_y;
 	bool has_preferred_timing = false;
+	char *manufacturer;
 
 	data_block = "EDID Structure Version & Revision";
 	printf("  %s: %hhu.%hhu\n", data_block.c_str(), x[0x12], x[0x13]);
@@ -1426,10 +1427,13 @@ void edid_state::parse_base_block(const unsigned char *x)
 	}
 
 	data_block = "Vendor & Product Identification";
+	manufacturer = manufacturer_name(x + 0x08);
 	printf("  %s:\n", data_block.c_str());
 	printf("    Manufacturer: %s\n    Model: %u\n",
-	       manufacturer_name(x + 0x08),
+	       manufacturer,
 	       (unsigned short)(x[0x0a] + (x[0x0b] << 8)));
+	if (!strcmp(manufacturer, "CID") && !cta.has_pidb)
+		fail("Manufacturer name is set to CID, but there is no CTA-861 Product Information Data Block.\n");
 	if (base.serial_number) {
 		unsigned sn = base.serial_number;
 

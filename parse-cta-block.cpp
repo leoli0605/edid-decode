@@ -1613,7 +1613,7 @@ static std::string display_use_case(unsigned char x)
 	default: break;
 	}
 	fail("Unknown Display product primary use case 0x%02x.\n", x);
-	return std::string("Unknown display use case (") + utohex(x) + ")";
+	return "Unknown";
 }
 
 static void cta_microsoft(const unsigned char *x, unsigned length)
@@ -1626,7 +1626,7 @@ static void cta_microsoft(const unsigned char *x, unsigned length)
 		printf("    Desktop Usage: %u\n", (x[1] >> 6) & 1);
 		printf("    Third-Party Usage: %u\n", (x[1] >> 5) & 1);
 	}
-	printf("    Display Product Primary Use Case: %u (%s)\n", x[1] & 0x1f,
+	printf("    Display Product Primary Use Case: %s\n",
 	       display_use_case(x[1] & 0x1f).c_str());
 	printf("    Container ID: %s\n", containerid2s(x + 2).c_str());
 }
@@ -1790,6 +1790,7 @@ static const char *speaker_map[] = {
 	"FLc/FRc - Front Left/Right of Center",
 	"RLC/RRC - Rear Left/Right of Center (Deprecated)",
 	"FLw/FRw - Front Left/Right Wide",
+
 	"TpFL/TpFR - Top Front Left/Right",
 	"TpC - Top Center",
 	"TpFC - Top Front Center",
@@ -1798,6 +1799,7 @@ static const char *speaker_map[] = {
 	"TpBC - Top Back Center",
 	"SiL/SiR - Side Left/Right",
 	"TpSiL/TpSiR - Top Side Left/Right",
+
 	"TpBL/TpBR - Top Back Left/Right",
 	"BtFC - Bottom Front Center",
 	"BtFL/BtFR - Bottom Front Left/Right",
@@ -1807,6 +1809,7 @@ static const char *speaker_map[] = {
 
 static void cta_sadb(const unsigned char *x, unsigned length)
 {
+	unsigned sad_deprecated = 0x7f000;
 	unsigned sad;
 	unsigned i;
 
@@ -1818,9 +1821,14 @@ static void cta_sadb(const unsigned char *x, unsigned length)
 	sad = ((x[2] << 16) | (x[1] << 8) | x[0]);
 
 	for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+		bool deprecated = sad_deprecated & (1 << i);
+
 		if ((sad >> i) & 1)
-			printf("    %s\n", speaker_map[i]);
+			printf("    %s%s\n", speaker_map[i],
+			       deprecated ? " (Deprecated, use the RCDB)" : "");
 	}
+	if (sad & 0xff040)
+		warn("Specifies deprecated speakers.\n");
 }
 
 static void cta_vesa_dtcdb(const unsigned char *x, unsigned length)
@@ -2255,9 +2263,9 @@ static const char *colorimetry1_map[] = {
 
 static const char *colorimetry2_map[] = {
 	"Gamut Boundary Description Metadata Profile P0",
-	"Reserved Gamut Boundary Description Metadata Profile P1",
-	"Reserved Gamut Boundary Description Metadata Profile P2",
-	"Reserved Gamut Boundary Description Metadata Profile P3",
+	"Reserved F41",
+	"Reserved F42",
+	"Reserved F43",
 	"Default",
 	"sRGB",
 	"ICtCp",
@@ -2275,17 +2283,11 @@ void edid_state::cta_colorimetry_block(const unsigned char *x, unsigned length)
 	for (i = 0; i < ARRAY_SIZE(colorimetry1_map); i++)
 		if (x[0] & (1 << i))
 			printf("    %s\n", colorimetry1_map[i]);
-	// Bits MD0-MD3 are used to indicate which HDMI Gamut Boundary Description
-	// Metadata Profiles are supported.
-	//
-	// HDMI 1.3a in section 5.3.12 describes 4 possible profiles, but it marks
-	// P3 as 'defined in a future specification'.
-	//
-	// HDMI 1.4b, however, only specifies profile P0 in section 8.3.3. And I've
-	// only seen P0 in practice. My assumption is that profiles P1-P3 are never
-	// used, and so these bits should be 0.
+	// Bit MD0 is used to indicate if HDMI Gamut Boundary Description
+	// Metadata Profile P0 is supported. Bits F41-F43 are reserved
+	// and must be set to 0.
 	if (x[1] & 0xe)
-		fail("Reserved bits MD1-MD3 must be 0.\n");
+		fail("Reserved bits F41-F43 must be 0.\n");
 	for (i = 0; i < ARRAY_SIZE(colorimetry2_map); i++)
 		if (x[1] & (1 << i))
 			printf("    %s\n", colorimetry2_map[i]);
@@ -2434,6 +2436,30 @@ static void cta_ifdb(const unsigned char *x, unsigned length)
 	}
 }
 
+void edid_state::cta_pidb(const unsigned char *x, unsigned length)
+{
+	if (length < 4) {
+		fail("Empty Data Block with length %u.\n", length);
+		return;
+	}
+	unsigned oui = (x[0] << 16) | (x[1] << 8) | x[2];
+	printf("    IEEE CID/OUI: %s\n", ouitohex(oui).c_str());
+	if (length == 4)
+		return;
+	printf("    Version: %u\n", x[3]);
+	if (x[3])
+		fail("Unsupported version %u.\n", x[3]);
+	if (length == 5)
+		return;
+	char pn[26];
+	memcpy(pn, x + 4, length - 5);
+	pn[length - 5] = 0;
+	for (unsigned i = 0; i < length - 5; i++)
+		if (x[4 + i] < 0x20 || x[4 + i] >= 0x80)
+			fail("Product Name: invalid ASCII value at position %u.\n", i);
+	printf("    Product Name: %s\n", pn);
+}
+
 void edid_state::cta_displayid_type_7(const unsigned char *x, unsigned length)
 {
 	check_displayid_datablock_revision(x[0], 0x00, 2);
@@ -2498,10 +2524,13 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 		fail("Empty Data Block with length %u.\n", length);
 		return;
 	}
-	if (x[0] & 3)
+	if (x[0] & 3) {
 		printf("    Max Stream Count: %u\n", (x[0] & 3) + 1);
-	if (x[0] & 4)
-		printf("    Supports MS NonMixed\n");
+		if (x[0] & 4)
+			printf("    Supports MS NonMixed\n");
+	} else if (x[0] & 4) {
+		fail("MS NonMixed support indicated but Max Stream Count == 0.\n");
+	}
 
 	num_descs = x[1] & 7;
 	if (num_descs == 0)
@@ -2603,6 +2632,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x714: data_block = "Speaker Location Data Block"; audio_block = true; break;
 
 	case 0x720: data_block = "InfoFrame Data Block"; break;
+	case 0x721: data_block = "Product Information Data Block"; break;
 
 	case 0x722: data_block = "DisplayID Type VII Video Timing Data Block"; break;
 	case 0x723: data_block = "DisplayID Type VIII Video Timing Data Block"; break;
@@ -2656,6 +2686,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x70f:
 	case 0x712:
 	case 0x713:
+	case 0x721:
 	case 0x778:
 	case 0x779:
 	case 0x77a:
@@ -2716,6 +2747,7 @@ void edid_state::cta_block(const unsigned char *x, std::vector<unsigned> &found_
 	case 0x713: cta_rcdb(x, length); break;
 	case 0x714: cta_sldb(x, length); break;
 	case 0x720: cta_ifdb(x, length); break;
+	case 0x721: cta_pidb(x, length); break;
 	case 0x722: cta_displayid_type_7(x, length); break;
 	case 0x723: cta_displayid_type_8(x, length); break;
 	case 0x72a: cta_displayid_type_10(x, length); break;
@@ -2809,6 +2841,8 @@ void edid_state::preparse_cta_block(unsigned char *x)
 				cta.has_cdb = true;
 			else if (x[i + 1] == 0x08)
 				cta.has_nvrdb = true;
+			else if (x[i + 1] == 0x21)
+				cta.has_pidb = true;
 			else if (x[i + 1] == 0x13 && (x[i + 2] & 0x40)) {
 				cta.preparsed_speaker_count = 1 + (x[i + 2] & 0x1f);
 				cta.preparsed_sld = x[i + 2] & 0x20;
