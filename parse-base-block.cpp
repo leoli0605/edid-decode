@@ -1432,8 +1432,12 @@ void edid_state::parse_base_block(const unsigned char *x)
 	printf("    Manufacturer: %s\n    Model: %u\n",
 	       manufacturer,
 	       (unsigned short)(x[0x0a] + (x[0x0b] << 8)));
-	if (!strcmp(manufacturer, "CID") && !cta.has_pidb)
-		fail("Manufacturer name is set to CID, but there is no CTA-861 Product Information Data Block.\n");
+	if (!strcmp(manufacturer, "CID")) {
+		if (has_cta && !cta.has_pidb)
+			fail("Manufacturer name is set to CID, but there is no CTA-861 Product Information Data Block.\n");
+		if (has_dispid && !has_cta && !dispid.has_product_identification)
+			fail("Manufacturer name is set to CID, but there is no DisplayID Product Identification Data Block.\n");
+	}
 	if (base.serial_number) {
 		unsigned sn = base.serial_number;
 

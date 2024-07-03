@@ -144,6 +144,11 @@ struct edid_state {
 		dtd_max_vsize_mm = dtd_max_hsize_mm = 0;
 		warnings = failures = 0;
 		has_cta = has_dispid = false;
+		// Note: for now we do not support native DisplayID data,
+		// so this is always false. But some tests are different
+		// depending on whether it is a native DisplayID structure
+		// or an extension block, so they can use this bool.
+		native_dispid = false;
 		hide_serial_numbers = false;
 		replace_unique_ids = false;
 		image_width = image_height = diagonal = 0;
@@ -206,7 +211,10 @@ struct edid_state {
 		dispid.is_base_block = true;
 		dispid.is_display = dispid.has_product_identification =
 			dispid.has_display_parameters = dispid.has_type_1_7 =
-			dispid.has_display_interface_features = false;
+			dispid.has_display_interface_features =
+			dispid.has_tiled_display_topology = dispid.has_ycbcr_420 =
+			dispid.is_arvr = dispid.has_arvr_hdm = dispid.has_arvr_layer =
+			dispid.has_stereo = dispid.has_stereo_display_interface = false;
 		dispid.block_number = 0;
 		dispid.image_width = dispid.image_height = 0;
 
@@ -224,6 +232,7 @@ struct edid_state {
 	unsigned unused_bytes;
 	bool has_cta;
 	bool has_dispid;
+	bool native_dispid;
 	bool hide_serial_numbers;
 	bool replace_unique_ids;
 	std::vector<std::string> serial_strings;
@@ -334,10 +343,17 @@ struct edid_state {
 		unsigned preparsed_displayid_blocks;
 		bool is_base_block;
 		bool is_display;
+		bool is_arvr;
 		bool has_product_identification;
 		bool has_display_parameters;
 		bool has_type_1_7;
 		bool has_display_interface_features;
+		bool has_tiled_display_topology;
+		bool has_stereo_display_interface;
+		bool has_arvr_hdm;
+		bool has_arvr_layer;
+		bool has_ycbcr_420;
+		bool has_stereo;
 		vec_timings_ext preferred_timings;
 		unsigned native_width, native_height;
 		// in 0.1 mm units
@@ -467,6 +483,7 @@ struct edid_state {
 	void parse_displayid_adaptive_sync(const unsigned char *x);
 	void parse_displayid_arvr_hmd(const unsigned char *x);
 	void parse_displayid_arvr_layer(const unsigned char *x);
+	void parse_displayid_brightness_lum_range(const unsigned char *x);
 	void parse_displayid_type_10_timing(const unsigned char *x, unsigned sz,
 					    bool is_cta = false);
 	void preparse_displayid_block(unsigned char *x);
