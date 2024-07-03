@@ -465,6 +465,8 @@ struct edid_state {
 	void parse_displayid_dynamic_video_timings_range_limits(const unsigned char *x);
 	void parse_displayid_ContainerID(const unsigned char *x);
 	void parse_displayid_adaptive_sync(const unsigned char *x);
+	void parse_displayid_arvr_hmd(const unsigned char *x);
+	void parse_displayid_arvr_layer(const unsigned char *x);
 	void parse_displayid_type_10_timing(const unsigned char *x, unsigned sz,
 					    bool is_cta = false);
 	void preparse_displayid_block(unsigned char *x);

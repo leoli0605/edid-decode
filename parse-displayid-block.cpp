@@ -1448,6 +1448,30 @@ void edid_state::parse_displayid_adaptive_sync(const unsigned char *x)
 	}
 }
 
+// tag 0x2c
+
+void edid_state::parse_displayid_arvr_hmd(const unsigned char *x)
+{
+	check_displayid_datablock_revision(x[1]);
+
+	if (!check_displayid_datablock_length(x, 77, 77))
+		return;
+
+	// TODO: parse the DB
+}
+
+// tag 0x2d
+
+void edid_state::parse_displayid_arvr_layer(const unsigned char *x)
+{
+	check_displayid_datablock_revision(x[1]);
+
+	if (!check_displayid_datablock_length(x, 25, 25))
+		return;
+
+	// TODO: parse the DB
+}
+
 // tag 0x32
 
 void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
@@ -1818,6 +1842,8 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x28: data_block = "Tiled Display Topology Data Block (" + utohex(tag) + ")"; break;
 	case 0x29: data_block = "ContainerID Data Block"; break;
 	case 0x2b: data_block = "Adaptive Sync Data Block"; break;
+	case 0x2c: data_block = "ARVR_HMD Data Block"; break;
+	case 0x2d: data_block = "ARVR_Layer Data Block"; break;
 	case 0x32: data_block = "Video Timing Modes Type 10 - Formula-based Timings Data Block"; break;
 	// 0x2a .. 0x7d RESERVED for Additional VESA-defined Data Blocks
 	case 0x7e: // DisplayID 2.0
@@ -1994,6 +2020,8 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x28: parse_displayid_tiled_display_topology(x, true); break;
 	case 0x29: parse_displayid_ContainerID(x); break;
 	case 0x2b: parse_displayid_adaptive_sync(x); break;
+	case 0x2c: parse_displayid_arvr_hmd(x); break;
+	case 0x2d: parse_displayid_arvr_layer(x); break;
 	case 0x32: {
 		   unsigned sz = 6 + ((x[1] & 0x70) >> 4);
 
