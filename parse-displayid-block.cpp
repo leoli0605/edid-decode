@@ -1432,7 +1432,7 @@ void edid_state::parse_displayid_adaptive_sync(const unsigned char *x)
 			fail("Use of reserved value %u.\n", v);
 			break;
 		}
-		if (x[0] & 0x10)
+		if (!(x[0] & 0x10))
 			printf("      Supports Seamless Transition\n");
 		if (x[0] & 0x02)
 			printf("      'Max Single Frame Duration Increase' field value without jitter impact\n");
