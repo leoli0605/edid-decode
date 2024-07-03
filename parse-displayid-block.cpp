@@ -1141,6 +1141,7 @@ static std::string ieee7542d(unsigned short fp)
 void edid_state::parse_displayid_parameters_v2(const unsigned char *x,
 					       unsigned block_rev)
 {
+	check_displayid_datablock_revision(x[1], 0, (x[1] & 7) == 1);
 	if (!check_displayid_datablock_length(x, 29, 29))
 		return;
 	if (dispid.has_display_parameters)
