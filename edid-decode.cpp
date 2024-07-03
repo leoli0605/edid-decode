@@ -170,7 +170,7 @@ static void usage(void)
 	       "                        If 'hblank' is given and <rb>=3, then the horizontal blanking\n"
 	       "                        is <hblank> pixels (range of 80-200), overriding 'alt'.\n"
 	       "                        If 'vblank' is given and <rb>=3, then the vertical blanking\n"
-	       "                        time is <vblank> microseconds (range of 460-705).\n"
+	       "                        time is <vblank> microseconds (range of 460-705 or 300-440).\n"
 	       "                        If 'early-vsync' is given and <rb=3>, then select early vsync.\n"
 	       "  --gtf w=<width>,h=<height>[,fps=<fps>][,horfreq=<horfreq>][,pixclk=<pixclk>][,interlaced]\n"
 	       "        [,overscan][,secondary][,C=<c>][,M=<m>][,K=<k>][,J=<j>]\n"
