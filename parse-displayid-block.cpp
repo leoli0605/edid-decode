@@ -1511,7 +1511,9 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 
 	unsigned rb = t.rb;
 	unsigned rb_h_blank = rb == RB_CVT_V3 ? 80 : 0;
-	unsigned rb_v_blank = 460;
+	bool alt_min_vblank = sz >= 8 ? (x[7] & 1) : 0;
+	unsigned rb_v_min_blank = alt_min_vblank ? 300 : 460;
+	unsigned rb_v_blank = rb_v_min_blank;
 	bool early_vsync_rqd = false;
 
 	if (x[0] & 0x10) {
@@ -1553,9 +1555,9 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 			if (delta_hblank)
 				s += ", delta-hblank=" + std::to_string(delta_hblank);
 
-			rb_v_blank += ((x[6] >> 5) & 7) * 35;
-			if (rb_v_blank > 460)
-				s += ", add-vblank=" + std::to_string(rb_v_blank - 460);
+			rb_v_blank += ((x[6] >> 5) & 7) * (alt_min_vblank ? 20 : 35);
+			if (rb_v_blank > rb_v_min_blank)
+				s += ", add-vblank=" + std::to_string(rb_v_blank - rb_v_min_blank);
 		} else {
 			if (x[6] & 0xe0)
 				fail("Additional_Vertical_Blank_Time must be 0.\n");
