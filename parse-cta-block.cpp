@@ -628,7 +628,7 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 			}
 			if (first_svd && !cta.preferred_timings.empty()) {
 				if (!match_timings(cta.preferred_timings[0].t, *t))
-					warn("VIC %u is the preferred timing, overriding the first detailed timings. Is this intended?\n", vic);
+					warn("VIC %u and the first DTD are not identical. Is this intended?\n", vic);
 				else if (cta.first_svd_might_be_preferred)
 					warn("For improved preferred timing interoperability, set 'Native detailed modes' to 1.\n");
 			}
