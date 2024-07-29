@@ -614,7 +614,6 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 				break;
 			}
 			bool first_svd = cta.first_svd && !for_ycbcr420;
-			bool override_pref = first_svd && cta.first_svd_might_be_preferred;
 
 			char type[16];
 			sprintf(type, "VIC %3u", vic);
@@ -627,17 +626,18 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 			} else {
 				print_timings("    ", t, type, flags);
 			}
-			if (override_pref) {
-				if (!cta.preferred_timings.empty()) {
-					if (match_timings(cta.preferred_timings[0].t, *t))
-						warn("For improved preferred timing interoperability, set 'Native detailed modes' to 1.\n");
-					else
-						warn("VIC %u is the preferred timing, overriding the first detailed timings. Is this intended?\n", vic);
-				}
-				cta.preferred_timings.insert(cta.preferred_timings.begin(),
-							     timings_ext(*t, type, flags));
-			} else if (first_svd) {
-				cta.preferred_timings.push_back(timings_ext(*t, type, flags));
+			if (first_svd && !cta.preferred_timings.empty()) {
+				if (!match_timings(cta.preferred_timings[0].t, *t))
+					warn("VIC %u is the preferred timing, overriding the first detailed timings. Is this intended?\n", vic);
+				else if (cta.first_svd_might_be_preferred)
+					warn("For improved preferred timing interoperability, set 'Native detailed modes' to 1.\n");
+			}
+			if (first_svd) {
+				if (cta.first_svd_might_be_preferred)
+					cta.preferred_timings.insert(cta.preferred_timings.begin(),
+								     timings_ext(*t, type, flags));
+				else
+					cta.preferred_timings.push_back(timings_ext(*t, type, flags));
 			}
 			if (first_svd) {
 				cta.first_svd = false;
