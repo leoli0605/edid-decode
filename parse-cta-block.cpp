@@ -1418,13 +1418,6 @@ static double pq2nits(double pq)
 	return v * 10000.0;
 }
 
-static double chrom2d(const unsigned char *x)
-{
-	unsigned v = x[0] + (x[1] << 8);
-
-	return v * 0.00002;
-}
-
 static double perc2d(unsigned char x)
 {
 	double m = x >> 2;

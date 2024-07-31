@@ -553,6 +553,13 @@ void msg(bool is_warn, const char *fmt, ...);
 // NULL terminated array
 extern const char *cta_speaker_map[];
 
+static inline double chrom2d(const unsigned char *x)
+{
+	unsigned v = x[0] + (x[1] << 8);
+
+	return v * 0.00002;
+}
+
 std::string utohex(unsigned char x);
 std::string ouitohex(unsigned oui);
 std::string containerid2s(const unsigned char *x);
