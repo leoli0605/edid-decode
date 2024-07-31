@@ -730,7 +730,8 @@ const char *oui_name(unsigned oui, unsigned *ouinum)
 }
 
 void edid_state::data_block_oui(std::string block_name, const unsigned char *x,
-	unsigned length, unsigned *ouinum, bool ignorezeros, bool do_ascii, bool big_endian)
+	unsigned length, unsigned *ouinum, bool ignorezeros, bool do_ascii, bool big_endian,
+	bool silent)
 {
 	std::string buf;
 	char ascii[4];
@@ -787,7 +788,8 @@ void edid_state::data_block_oui(std::string block_name, const unsigned char *x,
 	data_block = name;
 
 	if (oui || !ignorezeros) {
-		printf("  %s:\n", data_block.c_str());
+		if (!silent)
+			printf("  %s:\n", data_block.c_str());
 		if (length < 3)
 			fail("Data block length (%d) is not enough to contain an OUI.\n", length);
 		else if (ouiname) {

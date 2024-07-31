@@ -415,7 +415,8 @@ struct edid_state {
 	void list_established_timings();
 
 	void data_block_oui(std::string block_name, const unsigned char *x, unsigned length, unsigned *ouinum,
-	                    bool ignorezeros = false, bool do_ascii = false, bool big_endian = false);
+	                    bool ignorezeros = false, bool do_ascii = false, bool big_endian = false,
+			    bool silent = false);
 
 	void print_vic_index(const char *prefix, unsigned idx, const char *suffix, bool ycbcr420 = false);
 	void hdmi_latency(unsigned char vid_lat, unsigned char aud_lat, bool is_ilaced);
