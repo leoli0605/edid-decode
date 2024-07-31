@@ -532,7 +532,7 @@ static void print_detailed_timing(unsigned indent, const struct timings *t)
 
 bool edid_state::print_timings(const char *prefix, const struct timings *t,
 			       const char *type, const char *flags,
-			       bool detailed, bool do_checks)
+			       bool detailed, bool do_checks, unsigned ntsc)
 {
 	if (!t) {
 		// Should not happen
@@ -582,7 +582,7 @@ bool edid_state::print_timings(const char *prefix, const struct timings *t,
 
 	double refresh = t->pixclk_khz * 1000.0 / (htotal * vtotal);
 	double pixclk = t->pixclk_khz * 1000.0;
-	if (options[OptNTSC] && fmod(refresh, 6.0) == 0) {
+	if (((ntsc > 1 && options[OptNTSC]) || ntsc == 1) && fmod(refresh, 6.0) == 0) {
 		const double ntsc_fact = 1000.0 / 1001.0;
 		pixclk *= ntsc_fact;
 		refresh *= ntsc_fact;

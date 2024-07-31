@@ -374,12 +374,14 @@ struct edid_state {
 	std::string dtd_type() { return dtd_type(base.dtd_cnt); }
 	bool print_timings(const char *prefix, const struct timings *t,
 			   const char *type, const char *flags = "",
-			   bool detailed = false, bool do_checks = true);
+			   bool detailed = false, bool do_checks = true,
+			   unsigned ntsc = 2);
 	bool print_timings(const char *prefix, const struct timings_ext &t,
-			   bool detailed = false, bool do_checks = true)
+			   bool detailed = false, bool do_checks = true,
+			   unsigned ntsc = 2)
 	{
 		return print_timings(prefix, &t.t, t.type.c_str(), t.flags.c_str(),
-				     detailed, do_checks);
+				     detailed, do_checks, ntsc);
 	};
 	timings calc_gtf_mode(unsigned h_pixels, unsigned v_lines,
 			      double ip_freq_rqd, bool int_rqd = false,
