@@ -249,14 +249,17 @@ void replace_checksum(unsigned char *x, size_t len)
 	x[len - 1] = -sum & 0xff;
 }
 
-void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes)
+void do_checksum(const char *prefix, const unsigned char *x, size_t len, size_t checksum_pos,
+		 unsigned unused_bytes)
 {
-	unsigned char check = x[len - 1];
+	unsigned char check = x[checksum_pos];
 	unsigned char sum = 0;
 	unsigned i;
 
-	for (i = 0; i < len - 1; i++)
-		sum += x[i];
+	for (i = 0; i < len; i++) {
+		if (i != checksum_pos)
+			sum += x[i];
+	}
 
 	printf("%sChecksum: 0x%02hhx", prefix, check);
 	if ((unsigned char)(check + sum) != 0) {
@@ -1232,7 +1235,7 @@ void edid_state::parse_extension(const unsigned char *x)
 	}
 
 	data_block.clear();
-	do_checksum("", x, EDID_PAGE_SIZE, unused_bytes);
+	do_checksum("", x, EDID_PAGE_SIZE, EDID_PAGE_SIZE - 1, unused_bytes);
 }
 
 void edid_state::print_preferred_timings()

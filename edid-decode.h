@@ -554,7 +554,8 @@ bool memchk(const unsigned char *x, unsigned len, unsigned char v = 0);
 void hex_block(const char *prefix, const unsigned char *x, unsigned length,
 	       bool show_ascii = true, unsigned step = 16);
 std::string block_name(unsigned char block);
-void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes = 0);
+void do_checksum(const char *prefix, const unsigned char *x, size_t len, size_t checksum_pos,
+		 unsigned unused_bytes = 0);
 void replace_checksum(unsigned char *x, size_t len);
 void calc_ratio(struct timings *t);
 const char *oui_name(unsigned oui, unsigned *ouinum = NULL);

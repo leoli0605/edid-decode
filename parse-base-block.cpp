@@ -1753,7 +1753,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 
 	block = block_name(0x00);
 	data_block.clear();
-	do_checksum("", x, EDID_PAGE_SIZE);
+	do_checksum("", x, EDID_PAGE_SIZE, EDID_PAGE_SIZE - 1);
 	if (base.edid_minor >= 3) {
 		if (!base.has_name_descriptor)
 			msg(base.edid_minor >= 4, "Missing Display Product Name.\n");
