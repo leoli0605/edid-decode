@@ -499,27 +499,41 @@ char *extract_string(const unsigned char *x, unsigned len)
 	memset(s, 0, sizeof(s));
 
 	for (i = 0; i < len; i++) {
+		// The encoding is cp437, so any character is allowed,
+		// but in practice it is unwise to use a non-ASCII character.
+		bool non_ascii = (x[i] >= 1 && x[i] < 0x20 && x[i] != 0x0a) || x[i] >= 0x7f;
+
 		if (seen_newline) {
 			if (x[i] != 0x20) {
 				fail("Non-space after newline.\n");
 				return s;
 			}
-		} else if (isgraph(x[i]) || x[i] == 0x20) {
-			s[i] = x[i];
 		} else if (x[i] == 0x0a) {
 			seen_newline = true;
 			if (!i)
 				fail("Empty string.\n");
 			else if (s[i - 1] == 0x20)
-				fail("One or more trailing spaces.\n");
-		} else {
-			fail("Non-printable character.\n");
+				fail("One or more trailing spaces before newline.\n");
+		} else if (!x[i]) {
+			// While incorrect, a \0 is often used to end the string
+			fail("NUL byte at position %u.\n", i);
 			return s;
+		} else if (x[i] == 0xff) {
+			// 0xff is sometimes (incorrectly) used to pad the remainder
+			// of the string
+			fail("0xff byte at position %u.\n", i);
+			return s;
+		} else if (!non_ascii) {
+			s[i] = x[i];
+		} else {
+			warn("Non-ASCII character 0x%02x at position %u, can cause problems.\n",
+			     x[i], i);
+			s[i] = '.';
 		}
 	}
 	/* Does the string end with a space? */
 	if (!seen_newline && s[len - 1] == 0x20)
-		fail("One or more trailing spaces.\n");
+		fail("No newline, but one or more trailing spaces.\n");
 
 	return s;
 }
