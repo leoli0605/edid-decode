@@ -1781,7 +1781,7 @@ static void cta_uhda_fmm(const unsigned char *x, unsigned length)
 	printf("    Filmmaker Mode Content Subtype: %u\n", x[1]);
 }
 
-static const char *speaker_map[] = {
+const char *cta_speaker_map[] = {
 	"FL/FR - Front Left/Right",
 	"LFE1 - Low Frequency Effects 1",
 	"FC - Front Center",
@@ -1805,6 +1805,7 @@ static const char *speaker_map[] = {
 	"BtFL/BtFR - Bottom Front Left/Right",
 	"TpLS/TpRS - Top Left/Right Surround (Deprecated for CTA-861)",
 	"LSd/RSd - Left/Right Surround Direct (HDMI only)",
+	NULL
 };
 
 static void cta_sadb(const unsigned char *x, unsigned length)
@@ -1820,11 +1821,11 @@ static void cta_sadb(const unsigned char *x, unsigned length)
 
 	sad = ((x[2] << 16) | (x[1] << 8) | x[0]);
 
-	for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+	for (i = 0; cta_speaker_map[i]; i++) {
 		bool deprecated = sad_deprecated & (1 << i);
 
 		if ((sad >> i) & 1)
-			printf("    %s%s\n", speaker_map[i],
+			printf("    %s%s\n", cta_speaker_map[i],
 			       deprecated ? " (Deprecated, use the RCDB)" : "");
 	}
 	if (sad & 0xff040)
@@ -2047,9 +2048,9 @@ void edid_state::cta_rcdb(const unsigned char *x, unsigned length)
 	}
 
 	printf("    Speaker Presence Mask:\n");
-	for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+	for (i = 0; cta_speaker_map[i]; i++) {
 		if ((spm >> i) & 1)
-			printf("      %s\n", speaker_map[i]);
+			printf("      %s\n", cta_speaker_map[i]);
 	}
 
 	if ((x[0] & 0xa0) == 0x80)
@@ -2575,9 +2576,9 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 				return;
 			}
 
-			for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+			for (i = 0; cta_speaker_map[i]; i++) {
 				if ((sad >> i) & 1)
-					printf("      %s\n", speaker_map[i]);
+					printf("      %s\n", cta_speaker_map[i]);
 			}
 		}
 		length -= 4;

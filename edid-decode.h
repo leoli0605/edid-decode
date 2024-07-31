@@ -549,6 +549,9 @@ void msg(bool is_warn, const char *fmt, ...);
 
 #endif
 
+// NULL terminated array
+extern const char *cta_speaker_map[];
+
 std::string utohex(unsigned char x);
 std::string ouitohex(unsigned oui);
 std::string containerid2s(const unsigned char *x);
