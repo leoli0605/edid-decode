@@ -305,6 +305,15 @@ static unsigned char rid_to_vic(unsigned char rid, unsigned char rate_index)
 	return rid2vic[rid][rate_index - 1];
 }
 
+unsigned char rid_fps_to_vic(unsigned char rid, unsigned fps)
+{
+	for (unsigned i = 1; i < ARRAY_SIZE(vf_rate_values); i++) {
+		if (vf_rate_values[i] == fps)
+			return rid2vic[rid][i - 1];
+	}
+	return 0;
+}
+
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic)
 {
 	for (vic = 1; vic <= ARRAY_SIZE(edid_cta_modes1); vic++) {
@@ -584,6 +593,8 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 		if ((svd - 1) & 0x40) {
 			vic = svd;
 			native = 0;
+			if (cta.avi_version == 2)
+				cta.avi_version = 3;
 		} else {
 			vic = svd & 0x7f;
 			native = svd & 0x80;
@@ -623,6 +634,7 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 				struct timings tmp = *t;
 				tmp.ycbcr420 = true;
 				print_timings("    ", &tmp, type, flags);
+				cta.has_ycbcr420 = true;
 			} else {
 				print_timings("    ", t, type, flags);
 			}
@@ -665,6 +677,9 @@ cta_vfd edid_state::cta_parse_vfd(const unsigned char *x, unsigned lvfd)
 {
 	cta_vfd vfd = {};
 
+	cta.avi_version = 4;
+	if (cta.avi_v4_length < 15)
+		cta.avi_v4_length = 15;
 	vfd.rid = x[0] & 0x3f;
 	if (vfd.rid >= ARRAY_SIZE(rids)) {
 		vfd.rid = 0;
@@ -819,6 +834,7 @@ void edid_state::cta_y420cmdb(const unsigned char *x, unsigned length)
 				if (cta.preparsed_has_vic[1][vic])
 					fail("VIC %u is also a YCbCr 4:2:0-only VIC.\n", vic);
 			}
+			cta.has_ycbcr420 = true;
 		}
 	}
 	if (max_idx >= cta.preparsed_svds[0].size())
@@ -2294,6 +2310,8 @@ void edid_state::cta_colorimetry_block(const unsigned char *x, unsigned length)
 	// desirable.
 	if (!base.uses_srgb && !(x[1] & 0x20))
 		warn("Set the sRGB colorimetry bit to avoid interop issues.\n");
+	if (x[1] & 0xf0)
+		cta.avi_version = 4;
 }
 
 static const char *eotf_map[] = {
@@ -2917,10 +2935,14 @@ void edid_state::parse_cta_block(const unsigned char *x)
 				warn("IT Video Formats are overscanned by default, but normally this should be underscanned.\n");
 			if (x[3] & 0x40)
 				printf("  Basic audio support\n");
-			if (x[3] & 0x20)
+			if (x[3] & 0x20) {
 				printf("  Supports YCbCr 4:4:4\n");
-			if (x[3] & 0x10)
+				cta.has_ycbcr444 = true;
+			}
+			if (x[3] & 0x10) {
 				printf("  Supports YCbCr 4:2:2\n");
+				cta.has_ycbcr422 = true;
+			}
 			// Disable this test: this fails a lot of EDIDs, and there are
 			// also some corner cases where you only want to receive 4:4:4
 			// and refuse a fallback to 4:2:2.

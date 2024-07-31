@@ -45,6 +45,7 @@ enum Option {
 	OptFBModeTimings = 'F',
 	OptHelp = 'h',
 	OptOnlyHexDump = 'H',
+	OptInfoFrame = 'I',
 	OptLongTimings = 'L',
 	OptNativeResolution = 'n',
 	OptNTSC = 'N',
@@ -113,6 +114,7 @@ static struct option long_options[] = {
 	{ "list-hdmi-vics", no_argument, 0, OptListHDMIVICs },
 	{ "list-rid-timings", required_argument, 0, OptListRIDTimings },
 	{ "list-rids", no_argument, 0, OptListRIDs },
+	{ "infoframe", required_argument, 0, OptInfoFrame },
 	{ 0, 0, 0, 0 }
 };
 
@@ -120,7 +122,7 @@ static void usage(void)
 {
 	printf("Usage: edid-decode <options> [in [out]]\n"
 	       "  [in]                  EDID file to parse. Read from standard input if none given\n"
-	       "                        or if the input filename is '-'.\n"
+	       "                        and --infoframe was not used, or if the input filename is '-'.\n"
 	       "  [out]                 Output the read EDID to this file. Write to standard output\n"
 	       "                        if the output filename is '-'.\n"
 	       "\nOptions:\n"
@@ -194,6 +196,8 @@ static void usage(void)
 	       "  --list-hdmi-vics      List all known HDMI VICs.\n"
 	       "  --list-rids           List all known RIDs.\n"
 	       "  --list-rid-timings <rid> List all timings for RID <rid> or all known RIDs if <rid> is 0.\n"
+	       "  -I, --infoframe <file> Parse the InfoFrame from <file> that was sent to this display.\n"
+	       "                        This option can be specified multiple times for different InfoFrame files.\n"
 	       "  -h, --help            Display this help message.\n");
 }
 #endif
@@ -299,6 +303,26 @@ void calc_ratio(struct timings *t)
 		t->hratio = 16;
 		t->vratio = 10;
 	}
+}
+
+unsigned calc_fps(const struct timings *t)
+{
+	unsigned vact = t->vact;
+	unsigned vbl = t->vfp + t->vsync + t->vbp + 2 * t->vborder;
+	unsigned hbl = t->hfp + t->hsync + t->hbp + 2 * t->hborder;
+	unsigned htotal = t->hact + hbl;
+
+	if (t->interlaced)
+		vact /= 2;
+
+	double vtotal = vact + vbl;
+
+	if (t->even_vtotal)
+		vtotal = vact + t->vfp + t->vsync + t->vbp;
+	else if (t->interlaced)
+		vtotal = vact + t->vfp + t->vsync + t->vbp + 0.5;
+
+	return t->pixclk_khz * 1000.0 / (htotal * vtotal);
 }
 
 std::string edid_state::dtd_type(unsigned cnt)
@@ -1511,6 +1535,7 @@ int edid_state::parse_edid()
 	printf("\n----------------\n");
 
 	if (!options[OptSkipSHA] && strlen(STRING(SHA))) {
+		options[OptSkipSHA] = 1;
 		printf("\nedid-decode SHA: %s %s\n", STRING(SHA), STRING(DATE));
 	}
 
@@ -1521,6 +1546,226 @@ int edid_state::parse_edid()
 			show_msgs(false);
 	}
 	printf("\nEDID conformity: %s\n", failures ? "FAIL" : "PASS");
+	return failures ? -2 : 0;
+}
+
+/* InfoFrame parsing */
+
+static unsigned char infoframe[32];
+static unsigned if_size;
+
+static bool if_add_byte(const char *s)
+{
+	char buf[3];
+
+	if (if_size == sizeof(infoframe))
+		return false;
+	buf[0] = s[0];
+	buf[1] = s[1];
+	buf[2] = 0;
+	infoframe[if_size++] = strtoul(buf, NULL, 16);
+	return true;
+}
+
+static bool extract_if_hex(const char *s)
+{
+	for (; *s; s++) {
+		if (isspace(*s))
+			continue;
+
+		/* Read one or two hex digits from the log */
+		if (!isxdigit(s[0]))
+			break;
+
+		if (!isxdigit(s[1])) {
+			odd_hex_digits = true;
+			return false;
+		}
+		if (!if_add_byte(s))
+			return false;
+		s++;
+	}
+	return if_size;
+}
+
+static bool extract_if(int fd)
+{
+	std::vector<char> if_data;
+	char buf[128];
+
+	for (;;) {
+		ssize_t i = read(fd, buf, sizeof(buf));
+
+		if (i < 0)
+			return false;
+		if (i == 0)
+			break;
+		if_data.insert(if_data.end(), buf, buf + i);
+	}
+
+	if (if_data.empty()) {
+		if_size = 0;
+		return false;
+	}
+	// Ensure it is safely terminated by a 0 char
+	if_data.push_back('\0');
+
+	const char *data = &if_data[0];
+	const char *start;
+
+	/* Look for edid-decode output */
+	start = strstr(data, "edid-decode InfoFrame (hex):");
+	if (start)
+		return extract_if_hex(strchr(start, ':') + 1);
+
+	// Drop the extra '\0' byte since we now assume binary data
+	if_data.pop_back();
+
+	if_size = if_data.size();
+
+	/* Assume binary */
+	if (if_size > sizeof(infoframe)) {
+		fprintf(stderr, "Binary InfoFrame length %u is greater than %zu.\n",
+			if_size, sizeof(infoframe));
+		return false;
+	}
+	memcpy(infoframe, data, if_size);
+	return true;
+}
+
+static int if_from_file(const char *from_file)
+{
+#ifdef O_BINARY
+	// Windows compatibility
+	int flags = O_RDONLY | O_BINARY;
+#else
+	int flags = O_RDONLY;
+#endif
+	int fd;
+
+	memset(infoframe, 0, sizeof(infoframe));
+	if_size = 0;
+
+	if ((fd = open(from_file, flags)) == -1) {
+		perror(from_file);
+		return -1;
+	}
+
+	odd_hex_digits = false;
+	if (!extract_if(fd)) {
+		if (!if_size) {
+			fprintf(stderr, "InfoFrame of '%s' was empty.\n", from_file);
+			return -1;
+		}
+		fprintf(stderr, "InfoFrame extraction of '%s' failed: ", from_file);
+		if (odd_hex_digits)
+			fprintf(stderr, "odd number of hexadecimal digits.\n");
+		else
+			fprintf(stderr, "unknown format.\n");
+		return -1;
+	}
+	close(fd);
+
+	return 0;
+}
+
+static void show_if_msgs(bool is_warn)
+{
+	printf("\n%s:\n\n", is_warn ? "Warnings" : "Failures");
+	if (s_msgs[0][is_warn].empty())
+		return;
+	printf("InfoFrame:\n%s",
+	       s_msgs[0][is_warn].c_str());
+}
+
+int edid_state::parse_if(const std::string &fname)
+{
+	int ret = if_from_file(fname.c_str());
+	unsigned min_size = 4;
+	bool is_hdmi = false;
+
+	if (ret)
+		return ret;
+
+	state.block_nr = 0;
+	state.data_block.clear();
+
+	if (!options[OptSkipHexDump]) {
+		printf("edid-decode InfoFrame (hex):\n\n");
+		hex_block("", infoframe, if_size, false);
+		if (options[OptOnlyHexDump])
+			return 0;
+		printf("\n----------------\n\n");
+	}
+
+	if (infoframe[0] >= 0x80) {
+		is_hdmi = true;
+		min_size++;
+	}
+
+	if (if_size < min_size) {
+		fail("InfoFrame is too small to parse.\n");
+		return -1;
+	}
+
+	if (is_hdmi) {
+		do_checksum("HDMI InfoFrame ", infoframe, if_size, 3);
+		printf("\n");
+		memcpy(infoframe + 3, infoframe + 4, if_size - 4);
+		infoframe[0] &= 0x7f;
+		if_size--;
+	}
+
+	switch (infoframe[0]) {
+	case 0x01:
+		parse_if_vendor(infoframe, if_size);
+		break;
+	case 0x02:
+		parse_if_avi(infoframe, if_size);
+		break;
+	case 0x03:
+		parse_if_spd(infoframe, if_size);
+		break;
+	case 0x04:
+		parse_if_audio(infoframe, if_size);
+		break;
+	case 0x05:
+		parse_if_mpeg_source(infoframe, if_size);
+		break;
+	case 0x06:
+		parse_if_ntsc_vbi(infoframe, if_size);
+		break;
+	case 0x07:
+		parse_if_drm(infoframe, if_size);
+		break;
+	default:
+		if (infoframe[0] <= 0x1f)
+			fail("Reserved InfoFrame type %hhx.\n", infoframe[0]);
+		else
+			fail("Forbidden InfoFrame type %hhx.\n", infoframe[0]);
+		break;
+	}
+
+	if (!options[OptCheck] && !options[OptCheckInline])
+		return 0;
+
+	printf("\n----------------\n");
+
+	if (!options[OptSkipSHA] && strlen(STRING(SHA))) {
+		options[OptSkipSHA] = 1;
+		printf("\nedid-decode SHA: %s %s\n", STRING(SHA), STRING(DATE));
+	}
+
+	if (options[OptCheck]) {
+		if (warnings)
+			show_if_msgs(true);
+		if (failures)
+			show_if_msgs(false);
+	}
+
+	printf("\n%s conformity: %s\n",
+	       state.data_block.empty() ? "InfoFrame" : state.data_block.c_str(),
+	       failures ? "FAIL" : "PASS");
 	return failures ? -2 : 0;
 }
 
@@ -2020,6 +2265,7 @@ int main(int argc, char **argv)
 	enum output_format out_fmt = OUT_FMT_DEFAULT;
 	gtf_parsed_data gtf_data;
 	unsigned list_rid = 0;
+	std::vector<std::string> if_names;
 	int ret;
 
 	while (1) {
@@ -2116,6 +2362,9 @@ int main(int argc, char **argv)
 		case OptListRIDTimings:
 			list_rid = strtoul(optarg, NULL, 0);
 			break;
+		case OptInfoFrame:
+			if_names.push_back(optarg);
+			break;
 		case ':':
 			fprintf(stderr, "Option '%s' requires a value.\n",
 				argv[optind]);
@@ -2163,10 +2412,14 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (optind == argc)
-		ret = edid_from_file("-", stdout);
-	else
+	if (optind == argc) {
+		if (options[OptInfoFrame] && !options[OptGTF])
+			ret = 0;
+		else
+			ret = edid_from_file("-", stdout);
+	} else {
 		ret = edid_from_file(argv[optind], argv[optind + 1] ? stderr : stdout);
+	}
 
 	if (ret && options[OptPhysicalAddress]) {
 		printf("f.f.f.f\n");
@@ -2203,7 +2456,26 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	return ret ? ret : state.parse_edid();
+	if (!ret && state.edid_size)
+		ret = state.parse_edid();
+
+	bool show_line = state.edid_size;
+
+	for (const auto &n : if_names) {
+		if (show_line)
+			printf("\n================\n\n");
+		show_line = true;
+
+		state.warnings = state.failures = 0;
+		for (unsigned i = 0; i < EDID_MAX_BLOCKS + 1; i++) {
+			s_msgs[i][0].clear();
+			s_msgs[i][1].clear();
+		}
+		int r = state.parse_if(n);
+		if (r && !ret)
+			ret = r;
+	}
+	return ret;
 }
 
 #else
@@ -2222,6 +2494,7 @@ extern "C" int parse_edid(const char *input)
 	options[OptCheck] = 1;
 	options[OptPreferredTimings] = 1;
 	options[OptNativeResolution] = 1;
+	options[OptSkipSHA] = 0;
 	state = edid_state();
 	int ret = edid_from_file(input, stderr);
 	return ret ? ret : state.parse_edid();

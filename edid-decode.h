@@ -202,6 +202,11 @@ struct edid_state {
 		cta.preparsed_t8vtdb_dmt = 0;
 		cta.preparsed_max_vic_pixclk_khz = 0;
 		cta.warn_about_hdmi_2x_dtd = false;
+		cta.avi_version = 2;
+		cta.avi_v4_length = 14;
+		cta.has_ycbcr444 = false;
+		cta.has_ycbcr422 = false;
+		cta.has_ycbcr420 = false;
 
 		// DisplayID block state
 		dispid.version = 0;
@@ -333,6 +338,11 @@ struct edid_state {
 		std::vector<unsigned char> preparsed_svds[2];
 		unsigned preparsed_max_vic_pixclk_khz;
 		bool warn_about_hdmi_2x_dtd;
+		unsigned avi_version;
+		unsigned avi_v4_length;
+		bool has_ycbcr444;
+		bool has_ycbcr422;
+		bool has_ycbcr420;
 	} cta;
 
 	// DisplayID block state
@@ -510,6 +520,18 @@ struct edid_state {
 	void print_preferred_timings();
 	void print_native_res();
 	int parse_edid();
+
+	int parse_if(const std::string &fname);
+	int parse_if_hdr(const unsigned char *x, unsigned size, unsigned char mask = 0xff);
+	void parse_if_hdmi(const unsigned char *x, unsigned len);
+	void parse_if_hdmi_forum(const unsigned char *x, unsigned len);
+	void parse_if_vendor(const unsigned char *x, unsigned size);
+	void parse_if_avi(const unsigned char *x, unsigned size);
+	void parse_if_spd(const unsigned char *x, unsigned size);
+	void parse_if_audio(const unsigned char *x, unsigned size);
+	void parse_if_mpeg_source(const unsigned char *x, unsigned size);
+	void parse_if_ntsc_vbi(const unsigned char *x, unsigned size);
+	void parse_if_drm(const unsigned char *x, unsigned size);
 };
 
 static inline void add_str(std::string &s, const std::string &add)
@@ -571,6 +593,7 @@ void do_checksum(const char *prefix, const unsigned char *x, size_t len, size_t 
 		 unsigned unused_bytes = 0);
 void replace_checksum(unsigned char *x, size_t len);
 void calc_ratio(struct timings *t);
+unsigned calc_fps(const struct timings *t);
 const char *oui_name(unsigned oui, unsigned *ouinum = NULL);
 unsigned gcd(unsigned a, unsigned b);
 
@@ -580,6 +603,7 @@ const struct timings *find_dmt_id(unsigned char dmt_id);
 const struct timings *close_match_to_dmt(const timings &t, unsigned &dmt);
 const struct timings *find_vic_id(unsigned char vic);
 const struct cta_rid *find_rid(unsigned char rid);
+unsigned char rid_fps_to_vic(unsigned char rid, unsigned fps);
 const struct timings *find_hdmi_vic_id(unsigned char hdmi_vic);
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic);
 bool cta_matches_vic(const timings &t, unsigned &vic);
