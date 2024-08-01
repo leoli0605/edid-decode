@@ -126,6 +126,7 @@ void edid_state::edid_gtf_mode(unsigned refresh, struct timings &t)
 #define CVT_C_PRIME 30.0
 #define CVT_M_PRIME 300.0
 #define CVT_RB_MIN_VBLANK 460.0
+#define CVT_RB_ALT_MIN_VBLANK 300.0
 
 // If rb == RB_CVT_V2, then alt means video-optimized (i.e. 59.94 instead of 60 Hz, etc.).
 // If rb == RB_CVT_V3, then alt means that rb_h_blank is 160 instead of 80.
@@ -140,8 +141,15 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 	t.vact = v_lines;
 	t.interlaced = int_rqd;
 
-	if (rb_v_blank < CVT_RB_MIN_VBLANK)
-		rb_v_blank = CVT_RB_MIN_VBLANK;
+	if (rb == RB_CVT_V3) {
+		if (rb_v_blank < CVT_RB_ALT_MIN_VBLANK)
+			rb_v_blank = CVT_RB_ALT_MIN_VBLANK;
+		else if (rb_v_blank > CVT_RB_ALT_MIN_VBLANK + 140 &&
+			 rb_v_blank < CVT_RB_MIN_VBLANK)
+			rb_v_blank = CVT_RB_MIN_VBLANK;
+		else if (rb_v_blank > CVT_RB_MIN_VBLANK + 460)
+			rb_v_blank = CVT_RB_MIN_VBLANK + 460;
+	}
 
 	double cell_gran = rb == RB_CVT_V2 ? 1 : CELL_GRAN;
 	double h_pixels_rnd = floor(h_pixels / cell_gran) * cell_gran;
@@ -213,8 +221,11 @@ timings edid_state::calc_cvt_mode(unsigned h_pixels, unsigned v_lines,
 		double rb_min_vbi = rb_v_fporch + v_sync + rb_v_bporch;
 		v_blank = vbi_lines < rb_min_vbi ? rb_min_vbi : vbi_lines;
 		double total_v_lines = v_blank + v_lines_rnd + vert_margin * 2 + interlace;
-		if (rb == RB_CVT_V3 && early_vsync_rqd)
+		if (rb == RB_CVT_V3 && early_vsync_rqd) {
 			rb_v_bporch = floor(vbi_lines / 2.0);
+			if (v_blank - rb_v_bporch - v_sync < rb_v_fporch)
+				rb_v_bporch = v_blank - v_sync - rb_v_fporch;
+		}
 		if (rb == RB_CVT_V1)
 			v_sync_bp = v_blank - rb_v_fporch;
 		else

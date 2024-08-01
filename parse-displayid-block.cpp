@@ -309,17 +309,21 @@ void edid_state::parse_displayid_type_1_7_timing(const unsigned char *x,
 		break;
 	case 1:
 		s += ", 3D stereo";
+		dispid.has_stereo = true;
 		break;
 	case 2:
 		s += ", 3D stereo depends on user action";
+		dispid.has_stereo = true;
 		break;
 	case 3:
 		s += ", reserved";
 		fail("Reserved stereo 0x03.\n");
 		break;
 	}
-	if (block_rev >= 2 && (x[3] & 0x80))
+	if (block_rev >= 2 && (x[3] & 0x80)) {
 		s += ", YCbCr 4:2:0";
+		dispid.has_ycbcr_420 = true;
+	}
 
 	t.hact = 1 + (x[4] | (x[5] << 8));
 	hbl = 1 + (x[6] | (x[7] << 8));
@@ -418,9 +422,11 @@ void edid_state::parse_displayid_type_2_timing(const unsigned char *x)
 		break;
 	case 1:
 		s += ", 3D stereo";
+		dispid.has_stereo = true;
 		break;
 	case 2:
 		s += ", 3D stereo depends on user action";
+		dispid.has_stereo = true;
 		break;
 	case 3:
 		s += ", reserved";
@@ -850,6 +856,8 @@ void edid_state::parse_displayid_display_intf(const unsigned char *x)
 
 void edid_state::parse_displayid_stereo_display_intf(const unsigned char *x)
 {
+	dispid.has_stereo_display_interface = true;
+
 	check_displayid_datablock_revision(x[1], 0xc0, 1);
 
 	switch (x[1] >> 6) {
@@ -956,9 +964,11 @@ void edid_state::parse_displayid_type_5_timing(const unsigned char *x)
 		break;
 	case 1:
 		s += ", 3D stereo";
+		dispid.has_stereo = true;
 		break;
 	case 2:
 		s += ", 3D stereo depends on user action";
+		dispid.has_stereo = true;
 		break;
 	case 3:
 		s += ", reserved";
@@ -992,6 +1002,8 @@ void edid_state::parse_displayid_tiled_display_topology(const unsigned char *x, 
 
 	if (!check_displayid_datablock_length(x, 22, 22))
 		return;
+
+	dispid.has_tiled_display_topology = true;
 
 	unsigned caps = x[3];
 	unsigned num_v_tile = (x[4] & 0xf) | (x[6] & 0x30);
@@ -1106,9 +1118,11 @@ void edid_state::parse_displayid_type_6_timing(const unsigned char *x)
 		break;
 	case 1:
 		s += ", 3D stereo";
+		dispid.has_stereo = true;
 		break;
 	case 2:
 		s += ", 3D stereo depends on user action";
+		dispid.has_stereo = true;
 		break;
 	case 3:
 		s += ", reserved";
@@ -1141,6 +1155,7 @@ static std::string ieee7542d(unsigned short fp)
 void edid_state::parse_displayid_parameters_v2(const unsigned char *x,
 					       unsigned block_rev)
 {
+	check_displayid_datablock_revision(x[1], 0, (x[1] & 7) == 1);
 	if (!check_displayid_datablock_length(x, 29, 29))
 		return;
 	if (dispid.has_display_parameters)
@@ -1252,9 +1267,11 @@ void edid_state::parse_displayid_type_9_timing(const unsigned char *x)
 		break;
 	case 1:
 		s += ", 3D stereo";
+		dispid.has_stereo = true;
 		break;
 	case 2:
 		s += ", 3D stereo depends on user action";
+		dispid.has_stereo = true;
 		break;
 	case 3:
 		s += ", reserved";
@@ -1431,7 +1448,7 @@ void edid_state::parse_displayid_adaptive_sync(const unsigned char *x)
 			fail("Use of reserved value %u.\n", v);
 			break;
 		}
-		if (x[0] & 0x10)
+		if (!(x[0] & 0x10))
 			printf("      Supports Seamless Transition\n");
 		if (x[0] & 0x02)
 			printf("      'Max Single Frame Duration Increase' field value without jitter impact\n");
@@ -1445,6 +1462,61 @@ void edid_state::parse_displayid_adaptive_sync(const unsigned char *x)
 		len -= size;
 		x += size;
 	}
+}
+
+// tag 0x2c
+
+void edid_state::parse_displayid_arvr_hmd(const unsigned char *x)
+{
+	dispid.has_arvr_hdm = true;
+
+	if (!native_dispid && dispid.is_arvr)
+		fail("Not allowed for DisplayID Extension Blocks.\n");
+
+	check_displayid_datablock_revision(x[1], 1);
+
+	if (!check_displayid_datablock_length(x, 79, 79))
+		return;
+
+	// TODO: parse the DB
+}
+
+// tag 0x2d
+
+void edid_state::parse_displayid_arvr_layer(const unsigned char *x)
+{
+	dispid.has_arvr_layer = true;
+
+	if (!native_dispid && dispid.is_arvr)
+		fail("Not allowed for DisplayID Extension Blocks.\n");
+
+	check_displayid_datablock_revision(x[1], 1);
+
+	if (!check_displayid_datablock_length(x, 20, 20))
+		return;
+
+	// TODO: parse the DB
+}
+
+// tag 0x2e
+
+void edid_state::parse_displayid_brightness_lum_range(const unsigned char *x)
+{
+	check_displayid_datablock_revision(x[1]);
+
+	if (!check_displayid_datablock_length(x, 6, 6))
+		return;
+
+	printf("    Minimum SDR Luminance (Full Coverage): %s\n",
+	       ieee7542d(x[3] | (x[4] << 8)).c_str());
+	// TODO: test that this is > Native Minimum Luminance from Display Params DB
+	printf("    Maximum Suggested SDR Luminance (Full Coverage): %s\n",
+	       ieee7542d(x[5] | (x[6] << 8)).c_str());
+	// TODO: test that this is > Native Minimum Luminance from Display Params DB
+	// and <= Native Maximum Luminance (Full Coverage) in same DB.
+	printf("    Maximum Boost SDR Luminance: %s\n",
+	       ieee7542d(x[5] | (x[6] << 8)).c_str());
+	// TODO: test that this is >= the previous value
 }
 
 // tag 0x32
@@ -1467,9 +1539,11 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 		break;
 	case 1:
 		s += ", 3D stereo";
+		dispid.has_stereo = true;
 		break;
 	case 2:
 		s += ", 3D stereo depends on user action";
+		dispid.has_stereo = true;
 		break;
 	case 3:
 		s += ", reserved";
@@ -1486,7 +1560,9 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 
 	unsigned rb = t.rb;
 	unsigned rb_h_blank = rb == RB_CVT_V3 ? 80 : 0;
-	unsigned rb_v_blank = 460;
+	bool alt_min_vblank = sz >= 8 ? (x[7] & 1) : 0;
+	unsigned rb_v_min_blank = alt_min_vblank ? 300 : 460;
+	unsigned rb_v_blank = rb_v_min_blank;
 	bool early_vsync_rqd = false;
 
 	if (x[0] & 0x10) {
@@ -1501,8 +1577,10 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 			fail("VR_HB must be 0.\n");
 		}
 	}
-	if (x[0] & 0x80)
+	if (x[0] & 0x80) {
 		s += ", YCbCr 4:2:0";
+		dispid.has_ycbcr_420 = true;
+	}
 
 	if (x[0] & 0x08) {
 		if (rb == RB_CVT_V3) {
@@ -1528,9 +1606,9 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 			if (delta_hblank)
 				s += ", delta-hblank=" + std::to_string(delta_hblank);
 
-			rb_v_blank += ((x[6] >> 5) & 7) * 35;
-			if (rb_v_blank > 460)
-				s += ", add-vblank=" + std::to_string(rb_v_blank - 460);
+			rb_v_blank += ((x[6] >> 5) & 7) * (alt_min_vblank ? 20 : 35);
+			if (rb_v_blank > rb_v_min_blank)
+				s += ", add-vblank=" + std::to_string(rb_v_blank - rb_v_min_blank);
 		} else {
 			if (x[6] & 0xe0)
 				fail("Additional_Vertical_Blank_Time must be 0.\n");
@@ -1665,6 +1743,7 @@ std::string edid_state::product_type(unsigned char x, bool heading)
 		headingstr = "Display Product Primary Use Case";
 		if (heading) return headingstr;
 		dispid.is_display = x >= 2 && x <= 8;
+		dispid.is_arvr = x >= 7 && x <= 8;
 		switch (x) {
 		case 0: return "Same primary use case as the base section";
 		case 1: return "Test Structure; test equipment only";
@@ -1817,6 +1896,9 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x28: data_block = "Tiled Display Topology Data Block (" + utohex(tag) + ")"; break;
 	case 0x29: data_block = "ContainerID Data Block"; break;
 	case 0x2b: data_block = "Adaptive Sync Data Block"; break;
+	case 0x2c: data_block = "ARVR_HMD Data Block"; break;
+	case 0x2d: data_block = "ARVR_Layer Data Block"; break;
+	case 0x2e: data_block = "Brightness Luminance Range Data Block"; break;
 	case 0x32: data_block = "Video Timing Modes Type 10 - Formula-based Timings Data Block"; break;
 	// 0x2a .. 0x7d RESERVED for Additional VESA-defined Data Blocks
 	case 0x7e: // DisplayID 2.0
@@ -1993,10 +2075,16 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x28: parse_displayid_tiled_display_topology(x, true); break;
 	case 0x29: parse_displayid_ContainerID(x); break;
 	case 0x2b: parse_displayid_adaptive_sync(x); break;
+	case 0x2c: parse_displayid_arvr_hmd(x); break;
+	case 0x2d: parse_displayid_arvr_layer(x); break;
+	case 0x2e: parse_displayid_brightness_lum_range(x); break;
 	case 0x32: {
 		   unsigned sz = 6 + ((x[1] & 0x70) >> 4);
 
 		   check_displayid_datablock_revision(x[1], 0x70);
+		   if (sz > 8)
+			   fail("Invalid descriptor size %u.\n", sz);
+
 		   for (i = 0; i < len / sz; i++)
 			   parse_displayid_type_10_timing(&x[3 + i * sz], sz);
 		   break;
@@ -2065,7 +2153,7 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 	 * (excluding DisplayID-in-EDID magic byte)
 	 */
 	data_block.clear();
-	do_checksum("  ", x + 1, x[2] + 5);
+	do_checksum("  ", x + 1, x[2] + 5, x[2] + 4);
 
 	unused_bytes = 0x7f - (1 + x[2] + 5);
 	if (!memchk(x + 1 + x[2] + 5, unused_bytes)) {
@@ -2078,12 +2166,20 @@ void edid_state::parse_displayid_block(const unsigned char *x)
 void edid_state::check_displayid_blocks()
 {
 	data_block = "DisplayID";
-	if (!dispid.has_product_identification)
+	if (!dispid.has_product_identification &&
+	    (native_dispid || dispid.has_tiled_display_topology))
 		fail("Missing DisplayID Product Identification Data Block.\n");
-	if (dispid.is_display && !dispid.has_display_parameters)
+	if (dispid.is_display && (native_dispid || !dispid.has_display_parameters))
 		fail("Missing DisplayID Display Parameters Data Block.\n");
-	if (dispid.is_display && !dispid.has_display_interface_features)
+	if (dispid.is_display && !dispid.has_display_interface_features &&
+	    (native_dispid || dispid.has_ycbcr_420))
 		fail("Missing DisplayID Display Interface Features Data Block.\n");
+	if (native_dispid && dispid.is_arvr && !dispid.has_arvr_hdm)
+		fail("Missing DisplayID ARVR_HMD Data Block.\n");
+	if (native_dispid && dispid.is_arvr && !dispid.has_arvr_layer)
+		fail("Missing DisplayID ARVR_Layer Data Block.\n");
+	if (dispid.has_stereo && !dispid.has_stereo_display_interface)
+		fail("Missing DisplayID Stereo Display Interface Data Block.\n");
 	if (dispid.is_display && !dispid.has_type_1_7)
 		fail("Missing DisplayID Type %s Detailed Timing Data Block.\n",
 		     dispid.version >= 0x20 ? "VII" : "I");

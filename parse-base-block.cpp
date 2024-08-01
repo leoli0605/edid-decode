@@ -499,27 +499,41 @@ char *extract_string(const unsigned char *x, unsigned len)
 	memset(s, 0, sizeof(s));
 
 	for (i = 0; i < len; i++) {
+		// The encoding is cp437, so any character is allowed,
+		// but in practice it is unwise to use a non-ASCII character.
+		bool non_ascii = (x[i] >= 1 && x[i] < 0x20 && x[i] != 0x0a) || x[i] >= 0x7f;
+
 		if (seen_newline) {
 			if (x[i] != 0x20) {
 				fail("Non-space after newline.\n");
 				return s;
 			}
-		} else if (isgraph(x[i]) || x[i] == 0x20) {
-			s[i] = x[i];
 		} else if (x[i] == 0x0a) {
 			seen_newline = true;
 			if (!i)
 				fail("Empty string.\n");
 			else if (s[i - 1] == 0x20)
-				fail("One or more trailing spaces.\n");
-		} else {
-			fail("Non-printable character.\n");
+				fail("One or more trailing spaces before newline.\n");
+		} else if (!x[i]) {
+			// While incorrect, a \0 is often used to end the string
+			fail("NUL byte at position %u.\n", i);
 			return s;
+		} else if (x[i] == 0xff) {
+			// 0xff is sometimes (incorrectly) used to pad the remainder
+			// of the string
+			fail("0xff byte at position %u.\n", i);
+			return s;
+		} else if (!non_ascii) {
+			s[i] = x[i];
+		} else {
+			warn("Non-ASCII character 0x%02x at position %u, can cause problems.\n",
+			     x[i], i);
+			s[i] = '.';
 		}
 	}
 	/* Does the string end with a space? */
 	if (!seen_newline && s[len - 1] == 0x20)
-		fail("One or more trailing spaces.\n");
+		fail("No newline, but one or more trailing spaces.\n");
 
 	return s;
 }
@@ -1432,8 +1446,12 @@ void edid_state::parse_base_block(const unsigned char *x)
 	printf("    Manufacturer: %s\n    Model: %u\n",
 	       manufacturer,
 	       (unsigned short)(x[0x0a] + (x[0x0b] << 8)));
-	if (!strcmp(manufacturer, "CID") && !cta.has_pidb)
-		fail("Manufacturer name is set to CID, but there is no CTA-861 Product Information Data Block.\n");
+	if (!strcmp(manufacturer, "CID")) {
+		if (has_cta && !cta.has_pidb)
+			fail("Manufacturer name is set to CID, but there is no CTA-861 Product Information Data Block.\n");
+		if (has_dispid && !has_cta && !dispid.has_product_identification)
+			fail("Manufacturer name is set to CID, but there is no DisplayID Product Identification Data Block.\n");
+	}
 	if (base.serial_number) {
 		unsigned sn = base.serial_number;
 
@@ -1735,7 +1753,7 @@ void edid_state::parse_base_block(const unsigned char *x)
 
 	block = block_name(0x00);
 	data_block.clear();
-	do_checksum("", x, EDID_PAGE_SIZE);
+	do_checksum("", x, EDID_PAGE_SIZE, EDID_PAGE_SIZE - 1);
 	if (base.edid_minor >= 3) {
 		if (!base.has_name_descriptor)
 			msg(base.edid_minor >= 4, "Missing Display Product Name.\n");

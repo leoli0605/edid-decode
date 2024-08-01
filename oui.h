@@ -10,6 +10,7 @@ oneoui(0x0014b9, MSTAR,        "MSTAR"        )
 oneoui(0x00d046, Dolby,        "Dolby"        )
 oneoui(0x00e047, InFocus,      "InFocus"      )
 oneoui(0xca125c, Microsoft,    "Microsoft"    )
+oneoui(0x0012FA, THX,          "THX"          )
 
 // http://standards-oui.ieee.org/cid/cid.txt
 oneoui(0x1abbfb, UHDA,         "UHD Alliance" )

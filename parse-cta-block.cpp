@@ -305,6 +305,15 @@ static unsigned char rid_to_vic(unsigned char rid, unsigned char rate_index)
 	return rid2vic[rid][rate_index - 1];
 }
 
+unsigned char rid_fps_to_vic(unsigned char rid, unsigned fps)
+{
+	for (unsigned i = 1; i < ARRAY_SIZE(vf_rate_values); i++) {
+		if (vf_rate_values[i] == fps)
+			return rid2vic[rid][i - 1];
+	}
+	return 0;
+}
+
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic)
 {
 	for (vic = 1; vic <= ARRAY_SIZE(edid_cta_modes1); vic++) {
@@ -584,6 +593,8 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 		if ((svd - 1) & 0x40) {
 			vic = svd;
 			native = 0;
+			if (cta.avi_version == 2)
+				cta.avi_version = 3;
 		} else {
 			vic = svd & 0x7f;
 			native = svd & 0x80;
@@ -614,7 +625,6 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 				break;
 			}
 			bool first_svd = cta.first_svd && !for_ycbcr420;
-			bool override_pref = first_svd && cta.first_svd_might_be_preferred;
 
 			char type[16];
 			sprintf(type, "VIC %3u", vic);
@@ -624,20 +634,22 @@ void edid_state::cta_svd(const unsigned char *x, unsigned n, bool for_ycbcr420)
 				struct timings tmp = *t;
 				tmp.ycbcr420 = true;
 				print_timings("    ", &tmp, type, flags);
+				cta.has_ycbcr420 = true;
 			} else {
 				print_timings("    ", t, type, flags);
 			}
-			if (override_pref) {
-				if (!cta.preferred_timings.empty()) {
-					if (match_timings(cta.preferred_timings[0].t, *t))
-						warn("For improved preferred timing interoperability, set 'Native detailed modes' to 1.\n");
-					else
-						warn("VIC %u is the preferred timing, overriding the first detailed timings. Is this intended?\n", vic);
-				}
-				cta.preferred_timings.insert(cta.preferred_timings.begin(),
-							     timings_ext(*t, type, flags));
-			} else if (first_svd) {
-				cta.preferred_timings.push_back(timings_ext(*t, type, flags));
+			if (first_svd && !cta.preferred_timings.empty()) {
+				if (!match_timings(cta.preferred_timings[0].t, *t))
+					warn("VIC %u and the first DTD are not identical. Is this intended?\n", vic);
+				else if (cta.first_svd_might_be_preferred)
+					warn("For improved preferred timing interoperability, set 'Native detailed modes' to 1.\n");
+			}
+			if (first_svd) {
+				if (cta.first_svd_might_be_preferred)
+					cta.preferred_timings.insert(cta.preferred_timings.begin(),
+								     timings_ext(*t, type, flags));
+				else
+					cta.preferred_timings.push_back(timings_ext(*t, type, flags));
 			}
 			if (first_svd) {
 				cta.first_svd = false;
@@ -665,6 +677,9 @@ cta_vfd edid_state::cta_parse_vfd(const unsigned char *x, unsigned lvfd)
 {
 	cta_vfd vfd = {};
 
+	cta.avi_version = 4;
+	if (cta.avi_v4_length < 15)
+		cta.avi_v4_length = 15;
 	vfd.rid = x[0] & 0x3f;
 	if (vfd.rid >= ARRAY_SIZE(rids)) {
 		vfd.rid = 0;
@@ -819,6 +834,7 @@ void edid_state::cta_y420cmdb(const unsigned char *x, unsigned length)
 				if (cta.preparsed_has_vic[1][vic])
 					fail("VIC %u is also a YCbCr 4:2:0-only VIC.\n", vic);
 			}
+			cta.has_ycbcr420 = true;
 		}
 	}
 	if (max_idx >= cta.preparsed_svds[0].size())
@@ -1418,13 +1434,6 @@ static double pq2nits(double pq)
 	return v * 10000.0;
 }
 
-static double chrom2d(const unsigned char *x)
-{
-	unsigned v = x[0] + (x[1] << 8);
-
-	return v * 0.00002;
-}
-
 static double perc2d(unsigned char x)
 {
 	double m = x >> 2;
@@ -1781,7 +1790,7 @@ static void cta_uhda_fmm(const unsigned char *x, unsigned length)
 	printf("    Filmmaker Mode Content Subtype: %u\n", x[1]);
 }
 
-static const char *speaker_map[] = {
+const char *cta_speaker_map[] = {
 	"FL/FR - Front Left/Right",
 	"LFE1 - Low Frequency Effects 1",
 	"FC - Front Center",
@@ -1805,6 +1814,7 @@ static const char *speaker_map[] = {
 	"BtFL/BtFR - Bottom Front Left/Right",
 	"TpLS/TpRS - Top Left/Right Surround (Deprecated for CTA-861)",
 	"LSd/RSd - Left/Right Surround Direct (HDMI only)",
+	NULL
 };
 
 static void cta_sadb(const unsigned char *x, unsigned length)
@@ -1820,11 +1830,11 @@ static void cta_sadb(const unsigned char *x, unsigned length)
 
 	sad = ((x[2] << 16) | (x[1] << 8) | x[0]);
 
-	for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+	for (i = 0; cta_speaker_map[i]; i++) {
 		bool deprecated = sad_deprecated & (1 << i);
 
 		if ((sad >> i) & 1)
-			printf("    %s%s\n", speaker_map[i],
+			printf("    %s%s\n", cta_speaker_map[i],
 			       deprecated ? " (Deprecated, use the RCDB)" : "");
 	}
 	if (sad & 0xff040)
@@ -2047,9 +2057,9 @@ void edid_state::cta_rcdb(const unsigned char *x, unsigned length)
 	}
 
 	printf("    Speaker Presence Mask:\n");
-	for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+	for (i = 0; cta_speaker_map[i]; i++) {
 		if ((spm >> i) & 1)
-			printf("      %s\n", speaker_map[i]);
+			printf("      %s\n", cta_speaker_map[i]);
 	}
 
 	if ((x[0] & 0xa0) == 0x80)
@@ -2300,6 +2310,8 @@ void edid_state::cta_colorimetry_block(const unsigned char *x, unsigned length)
 	// desirable.
 	if (!base.uses_srgb && !(x[1] & 0x20))
 		warn("Set the sRGB colorimetry bit to avoid interop issues.\n");
+	if (x[1] & 0xf0)
+		cta.avi_version = 4;
 }
 
 static const char *eotf_map[] = {
@@ -2575,9 +2587,9 @@ static void cta_hdmi_audio_block(const unsigned char *x, unsigned length)
 				return;
 			}
 
-			for (i = 0; i < ARRAY_SIZE(speaker_map); i++) {
+			for (i = 0; cta_speaker_map[i]; i++) {
 				if ((sad >> i) & 1)
-					printf("      %s\n", speaker_map[i]);
+					printf("      %s\n", cta_speaker_map[i]);
 			}
 		}
 		length -= 4;
@@ -2923,10 +2935,14 @@ void edid_state::parse_cta_block(const unsigned char *x)
 				warn("IT Video Formats are overscanned by default, but normally this should be underscanned.\n");
 			if (x[3] & 0x40)
 				printf("  Basic audio support\n");
-			if (x[3] & 0x20)
+			if (x[3] & 0x20) {
 				printf("  Supports YCbCr 4:4:4\n");
-			if (x[3] & 0x10)
+				cta.has_ycbcr444 = true;
+			}
+			if (x[3] & 0x10) {
 				printf("  Supports YCbCr 4:2:2\n");
+				cta.has_ycbcr422 = true;
+			}
 			// Disable this test: this fails a lot of EDIDs, and there are
 			// also some corner cases where you only want to receive 4:4:4
 			// and refuse a fallback to 4:2:2.

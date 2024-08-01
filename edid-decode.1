@@ -117,7 +117,7 @@ EDID 1.4: VESA Enhanced Extended Display Identication Data Standard, Release A, 
 .TP
 DisplayID 1.3: VESA Display Identification Data (DisplayID) Standard, Version 1.3
 .TP
-DisplayID 2.1: VESA DisplayID Standard, Version 2.1
+DisplayID 2.1a: VESA DisplayID Standard, Version 2.1a
 .TP
 DI-EXT: VESA Display Information Extension Block Standard, Release A
 .TP
@@ -150,7 +150,7 @@ The following related standards are also used by edid-decode:
 .TP
 DMT 1.3: VESA and Industry Standards and Guidelines for Computer Display Monitor Timing (DMT), Version 1.0, Rev. 13
 .TP
-CVT 2.0: VESA Coordinated Video Timings (CVT) Standard, Version 2.0
+CVT 2.1: VESA Coordinated Video Timings (CVT) Standard, Version 2.1
 .TP
 CVT 1.2: VESA Coordinated Video Timings (CVT) Standard, Version 1.2
 .TP
@@ -198,6 +198,14 @@ Report the preferred timings at the end. There may be multiple preferred timing 
 depending on whether the Source only parses Block 0 (e.g. DVI outputs), or Block 0
 and the CTA-861 Extension Blocks (HDMI), or Block 0 and the DisplayID Extension Blocks
 (typical for DisplayPort).
+.TP
+\fB\-I\fR, \fB\-\-infoframe\fR \fI<file>\fR
+Parse the given InfoFrame file. This option can be used multiple times to
+parse multiple InfoFrames. If the EDID of the display to which these InfoFrames
+are transmitted is also given, then the conformity checks will take that EDID
+into account.
+
+Note: this is still work-in-progress, specifically for the AVI and HDMI InfoFrames.
 .TP
 \fB\-\-diagonal\fR \fI<inches>\fR
 Specify the diagonal of the display in inches. This will enable additional checks

@@ -144,6 +144,11 @@ struct edid_state {
 		dtd_max_vsize_mm = dtd_max_hsize_mm = 0;
 		warnings = failures = 0;
 		has_cta = has_dispid = false;
+		// Note: for now we do not support native DisplayID data,
+		// so this is always false. But some tests are different
+		// depending on whether it is a native DisplayID structure
+		// or an extension block, so they can use this bool.
+		native_dispid = false;
 		hide_serial_numbers = false;
 		replace_unique_ids = false;
 		image_width = image_height = diagonal = 0;
@@ -197,6 +202,11 @@ struct edid_state {
 		cta.preparsed_t8vtdb_dmt = 0;
 		cta.preparsed_max_vic_pixclk_khz = 0;
 		cta.warn_about_hdmi_2x_dtd = false;
+		cta.avi_version = 2;
+		cta.avi_v4_length = 14;
+		cta.has_ycbcr444 = false;
+		cta.has_ycbcr422 = false;
+		cta.has_ycbcr420 = false;
 
 		// DisplayID block state
 		dispid.version = 0;
@@ -206,7 +216,10 @@ struct edid_state {
 		dispid.is_base_block = true;
 		dispid.is_display = dispid.has_product_identification =
 			dispid.has_display_parameters = dispid.has_type_1_7 =
-			dispid.has_display_interface_features = false;
+			dispid.has_display_interface_features =
+			dispid.has_tiled_display_topology = dispid.has_ycbcr_420 =
+			dispid.is_arvr = dispid.has_arvr_hdm = dispid.has_arvr_layer =
+			dispid.has_stereo = dispid.has_stereo_display_interface = false;
 		dispid.block_number = 0;
 		dispid.image_width = dispid.image_height = 0;
 
@@ -224,6 +237,7 @@ struct edid_state {
 	unsigned unused_bytes;
 	bool has_cta;
 	bool has_dispid;
+	bool native_dispid;
 	bool hide_serial_numbers;
 	bool replace_unique_ids;
 	std::vector<std::string> serial_strings;
@@ -324,6 +338,11 @@ struct edid_state {
 		std::vector<unsigned char> preparsed_svds[2];
 		unsigned preparsed_max_vic_pixclk_khz;
 		bool warn_about_hdmi_2x_dtd;
+		unsigned avi_version;
+		unsigned avi_v4_length;
+		bool has_ycbcr444;
+		bool has_ycbcr422;
+		bool has_ycbcr420;
 	} cta;
 
 	// DisplayID block state
@@ -334,10 +353,17 @@ struct edid_state {
 		unsigned preparsed_displayid_blocks;
 		bool is_base_block;
 		bool is_display;
+		bool is_arvr;
 		bool has_product_identification;
 		bool has_display_parameters;
 		bool has_type_1_7;
 		bool has_display_interface_features;
+		bool has_tiled_display_topology;
+		bool has_stereo_display_interface;
+		bool has_arvr_hdm;
+		bool has_arvr_layer;
+		bool has_ycbcr_420;
+		bool has_stereo;
 		vec_timings_ext preferred_timings;
 		unsigned native_width, native_height;
 		// in 0.1 mm units
@@ -358,12 +384,14 @@ struct edid_state {
 	std::string dtd_type() { return dtd_type(base.dtd_cnt); }
 	bool print_timings(const char *prefix, const struct timings *t,
 			   const char *type, const char *flags = "",
-			   bool detailed = false, bool do_checks = true);
+			   bool detailed = false, bool do_checks = true,
+			   unsigned ntsc = 2);
 	bool print_timings(const char *prefix, const struct timings_ext &t,
-			   bool detailed = false, bool do_checks = true)
+			   bool detailed = false, bool do_checks = true,
+			   unsigned ntsc = 2)
 	{
 		return print_timings(prefix, &t.t, t.type.c_str(), t.flags.c_str(),
-				     detailed, do_checks);
+				     detailed, do_checks, ntsc);
 	};
 	timings calc_gtf_mode(unsigned h_pixels, unsigned v_lines,
 			      double ip_freq_rqd, bool int_rqd = false,
@@ -397,7 +425,8 @@ struct edid_state {
 	void list_established_timings();
 
 	void data_block_oui(std::string block_name, const unsigned char *x, unsigned length, unsigned *ouinum,
-	                    bool ignorezeros = false, bool do_ascii = false, bool big_endian = false);
+	                    bool ignorezeros = false, bool do_ascii = false, bool big_endian = false,
+			    bool silent = false);
 
 	void print_vic_index(const char *prefix, unsigned idx, const char *suffix, bool ycbcr420 = false);
 	void hdmi_latency(unsigned char vid_lat, unsigned char aud_lat, bool is_ilaced);
@@ -465,6 +494,9 @@ struct edid_state {
 	void parse_displayid_dynamic_video_timings_range_limits(const unsigned char *x);
 	void parse_displayid_ContainerID(const unsigned char *x);
 	void parse_displayid_adaptive_sync(const unsigned char *x);
+	void parse_displayid_arvr_hmd(const unsigned char *x);
+	void parse_displayid_arvr_layer(const unsigned char *x);
+	void parse_displayid_brightness_lum_range(const unsigned char *x);
 	void parse_displayid_type_10_timing(const unsigned char *x, unsigned sz,
 					    bool is_cta = false);
 	void preparse_displayid_block(unsigned char *x);
@@ -488,6 +520,18 @@ struct edid_state {
 	void print_preferred_timings();
 	void print_native_res();
 	int parse_edid();
+
+	int parse_if(const std::string &fname);
+	int parse_if_hdr(const unsigned char *x, unsigned size, unsigned char mask = 0xff);
+	void parse_if_hdmi(const unsigned char *x, unsigned len);
+	void parse_if_hdmi_forum(const unsigned char *x, unsigned len);
+	void parse_if_vendor(const unsigned char *x, unsigned size);
+	void parse_if_avi(const unsigned char *x, unsigned size);
+	void parse_if_spd(const unsigned char *x, unsigned size);
+	void parse_if_audio(const unsigned char *x, unsigned size);
+	void parse_if_mpeg_source(const unsigned char *x, unsigned size);
+	void parse_if_ntsc_vbi(const unsigned char *x, unsigned size);
+	void parse_if_drm(const unsigned char *x, unsigned size);
 };
 
 static inline void add_str(std::string &s, const std::string &add)
@@ -528,6 +572,16 @@ void msg(bool is_warn, const char *fmt, ...);
 
 #endif
 
+// NULL terminated array
+extern const char *cta_speaker_map[];
+
+static inline double chrom2d(const unsigned char *x)
+{
+	unsigned v = x[0] + (x[1] << 8);
+
+	return v * 0.00002;
+}
+
 std::string utohex(unsigned char x);
 std::string ouitohex(unsigned oui);
 std::string containerid2s(const unsigned char *x);
@@ -535,9 +589,11 @@ bool memchk(const unsigned char *x, unsigned len, unsigned char v = 0);
 void hex_block(const char *prefix, const unsigned char *x, unsigned length,
 	       bool show_ascii = true, unsigned step = 16);
 std::string block_name(unsigned char block);
-void do_checksum(const char *prefix, const unsigned char *x, size_t len, unsigned unused_bytes = 0);
+void do_checksum(const char *prefix, const unsigned char *x, size_t len, size_t checksum_pos,
+		 unsigned unused_bytes = 0);
 void replace_checksum(unsigned char *x, size_t len);
 void calc_ratio(struct timings *t);
+unsigned calc_fps(const struct timings *t);
 const char *oui_name(unsigned oui, unsigned *ouinum = NULL);
 unsigned gcd(unsigned a, unsigned b);
 
@@ -547,6 +603,7 @@ const struct timings *find_dmt_id(unsigned char dmt_id);
 const struct timings *close_match_to_dmt(const timings &t, unsigned &dmt);
 const struct timings *find_vic_id(unsigned char vic);
 const struct cta_rid *find_rid(unsigned char rid);
+unsigned char rid_fps_to_vic(unsigned char rid, unsigned fps);
 const struct timings *find_hdmi_vic_id(unsigned char hdmi_vic);
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic);
 bool cta_matches_vic(const timings &t, unsigned &vic);
