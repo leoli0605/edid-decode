@@ -2500,6 +2500,7 @@ extern "C" int parse_edid(const char *input)
 	options[OptPreferredTimings] = 1;
 	options[OptNativeResolution] = 1;
 	options[OptSkipSHA] = 0;
+	options[OptUTF8] = 1;
 	state = edid_state();
 	int ret = edid_from_file(input, stderr);
 	return ret ? ret : state.parse_edid();
