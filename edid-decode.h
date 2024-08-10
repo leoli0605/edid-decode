@@ -608,7 +608,9 @@ const struct timings *find_hdmi_vic_id(unsigned char hdmi_vic);
 const struct timings *cta_close_match_to_vic(const timings &t, unsigned &vic);
 bool cta_matches_vic(const timings &t, unsigned &vic);
 unsigned char hdmi_vic_to_vic(unsigned char hdmi_vic);
-char *extract_string(const unsigned char *x, unsigned len);
+
+extern bool to_utf8;
+char *extract_string(const unsigned char *x, unsigned len, bool is_cp437);
 
 #define oneoui(c,k,n) const unsigned kOUI_##k = __LINE__<<12;
 #include "oui.h"

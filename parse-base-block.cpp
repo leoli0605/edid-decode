@@ -489,11 +489,55 @@ void edid_state::detailed_cvt_descriptor(const char *prefix, const unsigned char
 	}
 }
 
+// Base Block uses Code Page 437, unprintable characters are represented by ▯
+static const char *cp437[256] = {
+"▯", "☺", "☻", "♥", "♦", "♣", "♠", "•", "◘", "○", "◙", "♂", "♀", "♪", "♫", "☼",
+"►", "◄", "↕", "‼", "¶", "§", "▬", "↨", "↑", "↓", "→", "←", "∟", "↔", "▲", "▼",
+" ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/",
+"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?",
+"@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
+"P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_",
+"`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
+"p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "⌂",
+"Ç", "ü", "é", "â", "ä", "à", "å", "ç", "ê", "ë", "è", "ï", "î", "ì", "Ä", "Å",
+"É", "æ", "Æ", "ô", "ö", "ò", "û", "ù", "ÿ", "Ö", "Ü", "¢", "£", "¥", "₧", "ƒ",
+"á", "í", "ó", "ú", "ñ", "Ñ", "ª", "º", "¿", "⌐", "¬", "½", "¼", "¡", "«", "»",
+"░", "▒", "▓", "│", "┤", "╡", "╢", "╖", "╕", "╣", "║", "╗", "╝", "╜", "╛", "┐",
+"└", "┴", "┬", "├", "─", "┼", "╞", "╟", "╚", "╔", "╩", "╦", "╠", "═", "╬", "╧",
+"╨", "╤", "╥", "╙", "╘", "╒", "╓", "╫", "╪", "┘", "┌", "█", "▄", "▌", "▐", "▀",
+"α", "ß", "Γ", "π", "Σ", "σ", "µ", "τ", "Φ", "Θ", "Ω", "δ", "∞", "φ", "ε", "∩",
+"≡", "±", "≥", "≤", "⌠", "⌡", "÷", "≈", "°", "∙", "·", "√", "ⁿ", "²", "■", "▯"
+};
+
+// DisplayID uses ISO 8859-1, unprintable chararcters are represented by ▯
+static const char *ascii[256] = {
+"▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯",
+"▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯",
+" ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/",
+"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?",
+"@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
+"P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_",
+"`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
+"p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "▯",
+"▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯",
+"▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯", "▯",
+"▯", "¡", "¢", "£", "¤", "¥", "¦", "§", "¨", "©", "ª", "«", "¬", "▯", "®", "¯",
+"°", "±", "²", "³", "´", "µ", "¶", "·", "¸", "¹", "º", "»", "¼", "½", "¾", "¿",
+"À", "Á", "Â", "Ã", "Ä", "Å", "Æ", "Ç", "È", "É", "Ê", "Ë", "Ì", "Í", "Î", "Ï",
+"Ð", "Ñ", "Ò", "Ó", "Ô", "Õ", "Ö", "×", "Ø", "Ù", "Ú", "Û", "Ü", "Ý", "Þ", "ß",
+"à", "á", "â", "ã", "ä", "å", "æ", "ç", "è", "é", "ê", "ë", "ì", "í", "î", "ï",
+"ð", "ñ", "ò", "ó", "ô", "õ", "ö", "÷", "ø", "ù", "ú", "û", "ü", "ý", "þ", "ÿ"
+};
+
+bool to_utf8 = false;
+
 /* extract a string from a detailed subblock, checking for termination */
-char *extract_string(const unsigned char *x, unsigned len)
+char *extract_string(const unsigned char *x, unsigned len, bool is_cp437)
 {
-	static char s[EDID_PAGE_SIZE];
+	static char s[1025];
+	const char **conv = is_cp437 ? cp437 : ascii;
 	bool seen_newline = false;
+	bool added_space = false;
 	unsigned i;
 
 	memset(s, 0, sizeof(s));
@@ -512,8 +556,9 @@ char *extract_string(const unsigned char *x, unsigned len)
 			seen_newline = true;
 			if (!i)
 				fail("Empty string.\n");
-			else if (s[i - 1] == 0x20)
+			else if (added_space)
 				fail("One or more trailing spaces before newline.\n");
+			added_space = false;
 		} else if (!x[i]) {
 			// While incorrect, a \0 is often used to end the string
 			fail("NUL byte at position %u.\n", i);
@@ -524,15 +569,26 @@ char *extract_string(const unsigned char *x, unsigned len)
 			fail("0xff byte at position %u.\n", i);
 			return s;
 		} else if (!non_ascii) {
-			s[i] = x[i];
+			added_space = x[i] == ' ';
+			if (to_utf8)
+				strcat(s, conv[x[i]]);
+			else
+				s[i] = x[i];
 		} else {
-			warn("Non-ASCII character 0x%02x at position %u, can cause problems.\n",
-			     x[i], i);
-			s[i] = '.';
+			if (to_utf8) {
+				warn("Non-ASCII character 0x%02x (%s) at position %u, can cause problems.\n",
+				     x[i], conv[x[i]], i);
+				strcat(s, conv[x[i]]);
+			} else {
+				warn("Non-ASCII character 0x%02x at position %u, can cause problems.\n",
+				     x[i], i);
+				s[i] = '.';
+			}
+			added_space = false;
 		}
 	}
 	/* Does the string end with a space? */
-	if (!seen_newline && s[len - 1] == 0x20)
+	if (!seen_newline && added_space)
 		fail("No newline, but one or more trailing spaces.\n");
 
 	return s;
@@ -1134,7 +1190,7 @@ bool edid_state::preparse_detailed_block(unsigned char *x)
 		break;
 	case 0xff:
 		data_block = "Display Product Serial Number";
-		serial_strings.push_back(extract_string(x + 5, 13));
+		serial_strings.push_back(extract_string(x + 5, 13, true));
 		data_block.clear();
 		if (replace_unique_ids) {
 			// Replace with 123456
@@ -1281,7 +1337,7 @@ void edid_state::detailed_block(const unsigned char *x)
 	case 0xfc:
 		data_block = "Display Product Name";
 		base.has_name_descriptor = 1;
-		printf("    %s: '%s'\n", data_block.c_str(), extract_string(x + 5, 13));
+		printf("    %s: '%s'\n", data_block.c_str(), extract_string(x + 5, 13, true));
 		return;
 	case 0xfd:
 		detailed_display_range_limits(x);
@@ -1290,7 +1346,7 @@ void edid_state::detailed_block(const unsigned char *x)
 		if (!base.has_spwg || base.detailed_block_cnt < 3) {
 			data_block = "Alphanumeric Data String";
 			printf("    %s: '%s'\n", data_block.c_str(),
-			       extract_string(x + 5, 13));
+			       extract_string(x + 5, 13, true));
 			return;
 		}
 		if (base.detailed_block_cnt == 3) {
@@ -1303,7 +1359,7 @@ void edid_state::detailed_block(const unsigned char *x)
 				fail("Invalid PC Maker P/N length.\n");
 			printf("      SPWG PC Maker P/N: '%s'\n", buf);
 			printf("      SPWG LCD Supplier EEDID Revision: %hhu\n", x[10]);
-			printf("      SPWG Manufacturer P/N: '%s'\n", extract_string(x + 11, 7));
+			printf("      SPWG Manufacturer P/N: '%s'\n", extract_string(x + 11, 7, true));
 		} else {
 			data_block = "SPWG Descriptor #4";
 			printf("    %s:\n", data_block.c_str());

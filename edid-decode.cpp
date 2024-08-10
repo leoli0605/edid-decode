@@ -54,6 +54,7 @@ enum Option {
 	OptPhysicalAddress = 'P',
 	OptSkipHexDump = 's',
 	OptShortTimings = 'S',
+	OptUTF8 = 'u',
 	OptV4L2Timings = 'V',
 	OptXModeLineTimings = 'X',
 	OptSkipSHA = 128,
@@ -91,6 +92,7 @@ static struct option long_options[] = {
 	{ "skip-sha", no_argument, 0, OptSkipSHA },
 	{ "hide-serial-numbers", no_argument, 0, OptHideSerialNumbers },
 	{ "replace-unique-ids", no_argument, 0, OptReplaceUniqueIDs },
+	{ "utf8", no_argument, 0, OptUTF8 },
 	{ "version", no_argument, 0, OptVersion },
 	{ "check-inline", no_argument, 0, OptCheckInline },
 	{ "check", no_argument, 0, OptCheck },
@@ -151,6 +153,7 @@ static void usage(void)
 	       "  --skip-sha            Skip the SHA report.\n"
 	       "  --hide-serial-numbers Hide serial numbers with '...'.\n"
 	       "  --replace-unique-ids  Replace unique IDs (serial numbers, dates, Container IDs) with fixed values.\n"
+	       "  -u, --utf8            Convert strings in EDIDs to UTF-8.\n"
 	       "  --version             Show the edid-decode version (SHA).\n"
 	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"
@@ -1474,6 +1477,8 @@ int edid_state::parse_edid()
 {
 	hide_serial_numbers = options[OptHideSerialNumbers];
 	replace_unique_ids = options[OptReplaceUniqueIDs];
+
+	to_utf8 = options[OptUTF8];
 
 	preparse_base_block(edid);
 	if (replace_unique_ids)
