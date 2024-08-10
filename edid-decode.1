@@ -256,6 +256,10 @@ failures. But it will also change the output of edid-decode for every new commit
 in the git repository, even if nothing else changed in the edid-decode output.
 Use this option to avoid including the SHA in the edid-decode output.
 .TP
+\fB\-u\fR, \fB\-\-utf8\fR
+Convert embedded EDID strings to UTF-8, using Code Page 437 for the base block
+and ISO 8859-1 for the DisplayID block.
+.TP
 \fB\-\-hide\-serial\-numbers\fR
 Hide any serial numbers in the human readable output by '...'.
 Note that they are still easily extracted from the EDID hex dump at
