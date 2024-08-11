@@ -205,6 +205,11 @@ parse multiple InfoFrames. If the EDID of the display to which these InfoFrames
 are transmitted is also given, then the conformity checks will take that EDID
 into account.
 
+If the first byte in the InfoFrame is 0x80 or higher, then it is assumed to be
+an InfoFrame that starts with the HDMI header and has a checksum, as per the
+HDMI Specification. Otherwise it is assumed to be a regular CTA-861 InfoFrame
+without a checksum.
+
 Note: this is still work-in-progress, specifically for the AVI and HDMI InfoFrames.
 .TP
 \fB\-\-diagonal\fR \fI<inches>\fR
