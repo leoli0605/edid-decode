@@ -2329,6 +2329,7 @@ int main(int argc, char **argv)
 		case OptDiag:
 			state.diagonal = strtod(optarg, NULL);
 			break;
+#ifndef __EMSCRIPTEN__
 		case OptI2CAdapter: {
 			unsigned num = strtoul(optarg, NULL, 0);
 
@@ -2337,6 +2338,7 @@ int main(int argc, char **argv)
 				exit(1);
 			break;
 		}
+#endif
 		case OptI2CHDCPRi:
 			hdcp_ri_sleep = strtod(optarg, NULL);
 			break;
@@ -2444,17 +2446,25 @@ int main(int argc, char **argv)
 
 	if (optind == argc) {
 		if (adapter_fd >= 0 && options[OptI2CEDID]) {
+#ifndef __EMSCRIPTEN__
 			ret = read_edid(adapter_fd, edid);
+#else
+			ret = -ENODEV;
+#endif
 			if (ret > 0) {
 				state.edid_size = ret * EDID_PAGE_SIZE;
 				state.num_blocks = ret;
 				ret = 0;
 			}
 		} else if (adapter_fd >= 0) {
+#ifndef __EMSCRIPTEN__
 			if (options[OptI2CHDCP])
 				read_hdcp(adapter_fd);
 			if (options[OptI2CHDCPRi])
 				read_hdcp_ri(adapter_fd, hdcp_ri_sleep);
+#else
+			ret = -ENODEV;
+#endif
 			ret = 0;
 		} else if (options[OptInfoFrame] && !options[OptGTF]) {
 			ret = 0;

@@ -5,6 +5,8 @@
  * Author: Hans Verkuil <hverkuil-cisco@xs4all.nl>
  */
 
+#ifndef __EMSCRIPTEN__
+
 #include <cctype>
 #include <cerrno>
 #include <csignal>
@@ -344,3 +346,5 @@ int read_hdcp_ri(int adapter_fd, double ri_time)
 	}
 	return 0;
 }
+
+#endif
