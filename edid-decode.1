@@ -133,6 +133,10 @@ HDMI 1.4b: High-Definition Multimedia Interface, Version 1.4b
 .TP
 HDMI 2.1b: High-Definition Multimedia Interface, Version 2.1b
 .TP
+HDCP 1.4: High-bandwidth Digital Content Protection System, Revision 1.4
+.TP
+HDCP 2.3: High-bandwidth Digital Content Protection System, Mapping HDCP to HDMI, Revision 2.3
+.TP
 CTA-861-I: A DTV Profile for Uncompressed High Speed Digital Interfaces
 .TP
 CTA-861.7: Improvements to CTA-861-I
@@ -286,6 +290,25 @@ The 'Made in' date appears in the Base Block.
 .TP
 \fB\-\-version\fR
 Show the SHA hash and the last commit date.
+
+.SH I2C/DDC OPTIONS
+The following options read the DDC bus directly, provided the DDC bus is
+exposed by linux to \fB/dev/i2c-\fR\fIX\fR as an i2c adapter device.
+
+This can be used to read the EDID and HDCP information directly from
+the sink and parse it.
+.TP
+\fB\-a\fR, \fB\-\-i2c\-adapter\fR \fI<num>\fR
+Use this \fB/dev/i2c-\fR\fI<num>\fR device.
+.TP
+\fB\-\-i2c\-edid\fR
+Read and parse the EDID from the i2c adapter.
+.TP
+\fB\-\-i2c\-hdcp\fR
+Read and parse the HDCP data from the i2c adapter.
+.TP
+\fB\-\-i2c\-hdcp-ri\fR \fI<t>\fR
+Every \fI<t>\fR seconds read and report the HDCP Ri value from the i2c adapter.
 
 .SH TIMING OPTIONS
 The following options report the timings for DMT, VIC and HDMI VIC codes and

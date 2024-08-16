@@ -615,4 +615,9 @@ char *extract_string(const unsigned char *x, unsigned len, bool is_cp437);
 #define oneoui(c,k,n) const unsigned kOUI_##k = __LINE__<<12;
 #include "oui.h"
 
+int request_i2c_adapter(unsigned adapnr);
+int read_edid(int adapter_fd, unsigned char *edid);
+int read_hdcp(int adapter_fd);
+int read_hdcp_ri(int adapter_fd, double ri_time);
+
 #endif

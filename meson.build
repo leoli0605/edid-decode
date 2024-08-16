@@ -50,6 +50,7 @@ endif
 edid_decode_sources = [
 	'calc-gtf-cvt.cpp',
 	'calc-ovt.cpp',
+	'ddc.cpp',
 	'edid-decode.cpp',
 	'parse-base-block.cpp',
 	'parse-cta-block.cpp',
