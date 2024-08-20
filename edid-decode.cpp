@@ -107,10 +107,12 @@ static struct option long_options[] = {
 	{ "fbmode", no_argument, 0, OptFBModeTimings },
 	{ "v4l2-timings", no_argument, 0, OptV4L2Timings },
 	{ "diagonal", required_argument, 0, OptDiag },
+#ifdef __HAS_I2C_DEV__
 	{ "i2c-adapter", required_argument, 0, OptI2CAdapter },
 	{ "i2c-edid", no_argument, 0, OptI2CEDID },
 	{ "i2c-hdcp", no_argument, 0, OptI2CHDCP },
 	{ "i2c-hdcp-ri", required_argument, 0, OptI2CHDCPRi },
+#endif
 	{ "std", required_argument, 0, OptSTD },
 	{ "dmt", required_argument, 0, OptDMT },
 	{ "vic", required_argument, 0, OptVIC },
@@ -164,10 +166,12 @@ static void usage(void)
 	       "  -u, --utf8            Convert strings in EDIDs to UTF-8.\n"
 	       "  --version             Show the edid-decode version (SHA).\n"
 	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
+#ifdef __HAS_I2C_DEV__
 	       "  -a, --i2c-adapter <num> Use /dev/i2c-<num> to access the DDC lines.\n"
 	       "  --i2c-edid		Read the EDID from the DDC lines.\n"
 	       "  --i2c-hdcp		Read the HDCP from the DDC lines.\n"
 	       "  --i2c-hdcp-ri=<t>	Read and print the HDCP Ri information every <t> seconds.\n"
+#endif
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"
 	       "  --dmt <dmt>           Show the timings for the DMT with the given DMT ID.\n"
 	       "  --vic <vic>           Show the timings for this VIC.\n"
@@ -2329,7 +2333,7 @@ int main(int argc, char **argv)
 		case OptDiag:
 			state.diagonal = strtod(optarg, NULL);
 			break;
-#ifndef __EMSCRIPTEN__
+#ifdef __HAS_I2C_DEV__
 		case OptI2CAdapter: {
 			unsigned num = strtoul(optarg, NULL, 0);
 
@@ -2446,26 +2450,17 @@ int main(int argc, char **argv)
 
 	if (optind == argc) {
 		if (adapter_fd >= 0 && options[OptI2CEDID]) {
-#ifndef __EMSCRIPTEN__
 			ret = read_edid(adapter_fd, edid);
-#else
-			ret = -ENODEV;
-#endif
 			if (ret > 0) {
 				state.edid_size = ret * EDID_PAGE_SIZE;
 				state.num_blocks = ret;
 				ret = 0;
 			}
 		} else if (adapter_fd >= 0) {
-#ifndef __EMSCRIPTEN__
 			if (options[OptI2CHDCP])
-				read_hdcp(adapter_fd);
+				ret = read_hdcp(adapter_fd);
 			if (options[OptI2CHDCPRi])
-				read_hdcp_ri(adapter_fd, hdcp_ri_sleep);
-#else
-			ret = -ENODEV;
-#endif
-			ret = 0;
+				ret = read_hdcp_ri(adapter_fd, hdcp_ri_sleep);
 		} else if (options[OptInfoFrame] && !options[OptGTF]) {
 			ret = 0;
 		} else {
