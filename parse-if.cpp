@@ -18,6 +18,8 @@ int edid_state::parse_if_hdr(const unsigned char *x, unsigned size, unsigned cha
 	printf("  Length: %u\n", length);
 
 	if (length + 3U > size) {
+		fprintf(stderr, "\nExpected InfoFrame total length of %d, but have only %d bytes.\n",
+			length + 3, size);
 		fail("Expected InfoFrame total length of %d, but have only %d bytes.\n",
 		     length + 3, size);
 		return -1;

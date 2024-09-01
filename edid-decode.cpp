@@ -40,6 +40,7 @@ enum output_format {
  * That makes it easier to see which options are still free.
  */
 enum Option {
+	OptI2CAdapter = 'a',
 	OptCheck = 'c',
 	OptCheckInline = 'C',
 	OptFBModeTimings = 'F',
@@ -54,6 +55,7 @@ enum Option {
 	OptPhysicalAddress = 'P',
 	OptSkipHexDump = 's',
 	OptShortTimings = 'S',
+	OptUTF8 = 'u',
 	OptV4L2Timings = 'V',
 	OptXModeLineTimings = 'X',
 	OptSkipSHA = 128,
@@ -61,6 +63,9 @@ enum Option {
 	OptReplaceUniqueIDs,
 	OptVersion,
 	OptDiag,
+	OptI2CEDID,
+	OptI2CHDCP,
+	OptI2CHDCPRi,
 	OptSTD,
 	OptDMT,
 	OptVIC,
@@ -91,6 +96,7 @@ static struct option long_options[] = {
 	{ "skip-sha", no_argument, 0, OptSkipSHA },
 	{ "hide-serial-numbers", no_argument, 0, OptHideSerialNumbers },
 	{ "replace-unique-ids", no_argument, 0, OptReplaceUniqueIDs },
+	{ "utf8", no_argument, 0, OptUTF8 },
 	{ "version", no_argument, 0, OptVersion },
 	{ "check-inline", no_argument, 0, OptCheckInline },
 	{ "check", no_argument, 0, OptCheck },
@@ -101,6 +107,12 @@ static struct option long_options[] = {
 	{ "fbmode", no_argument, 0, OptFBModeTimings },
 	{ "v4l2-timings", no_argument, 0, OptV4L2Timings },
 	{ "diagonal", required_argument, 0, OptDiag },
+#ifdef __HAS_I2C_DEV__
+	{ "i2c-adapter", required_argument, 0, OptI2CAdapter },
+	{ "i2c-edid", no_argument, 0, OptI2CEDID },
+	{ "i2c-hdcp", no_argument, 0, OptI2CHDCP },
+	{ "i2c-hdcp-ri", required_argument, 0, OptI2CHDCPRi },
+#endif
 	{ "std", required_argument, 0, OptSTD },
 	{ "dmt", required_argument, 0, OptDMT },
 	{ "vic", required_argument, 0, OptVIC },
@@ -151,8 +163,15 @@ static void usage(void)
 	       "  --skip-sha            Skip the SHA report.\n"
 	       "  --hide-serial-numbers Hide serial numbers with '...'.\n"
 	       "  --replace-unique-ids  Replace unique IDs (serial numbers, dates, Container IDs) with fixed values.\n"
+	       "  -u, --utf8            Convert strings in EDIDs to UTF-8.\n"
 	       "  --version             Show the edid-decode version (SHA).\n"
 	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
+#ifdef __HAS_I2C_DEV__
+	       "  -a, --i2c-adapter <num> Use /dev/i2c-<num> to access the DDC lines.\n"
+	       "  --i2c-edid		Read the EDID from the DDC lines.\n"
+	       "  --i2c-hdcp		Read the HDCP from the DDC lines.\n"
+	       "  --i2c-hdcp-ri=<t>	Read and print the HDCP Ri information every <t> seconds.\n"
+#endif
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"
 	       "  --dmt <dmt>           Show the timings for the DMT with the given DMT ID.\n"
 	       "  --vic <vic>           Show the timings for this VIC.\n"
@@ -1475,6 +1494,8 @@ int edid_state::parse_edid()
 	hide_serial_numbers = options[OptHideSerialNumbers];
 	replace_unique_ids = options[OptReplaceUniqueIDs];
 
+	to_utf8 = options[OptUTF8];
+
 	preparse_base_block(edid);
 	if (replace_unique_ids)
 		replace_checksum(edid, EDID_PAGE_SIZE);
@@ -2265,6 +2286,8 @@ int main(int argc, char **argv)
 	enum output_format out_fmt = OUT_FMT_DEFAULT;
 	gtf_parsed_data gtf_data;
 	unsigned list_rid = 0;
+	int adapter_fd = -1;
+	double hdcp_ri_sleep = 0;
 	std::vector<std::string> if_names;
 	int ret;
 
@@ -2309,6 +2332,19 @@ int main(int argc, char **argv)
 			break;
 		case OptDiag:
 			state.diagonal = strtod(optarg, NULL);
+			break;
+#ifdef __HAS_I2C_DEV__
+		case OptI2CAdapter: {
+			unsigned num = strtoul(optarg, NULL, 0);
+
+			adapter_fd = request_i2c_adapter(num);
+			if (adapter_fd < 0)
+				exit(1);
+			break;
+		}
+#endif
+		case OptI2CHDCPRi:
+			hdcp_ri_sleep = strtod(optarg, NULL);
 			break;
 		case OptSTD: {
 			unsigned char byte1, byte2 = 0;
@@ -2413,10 +2449,23 @@ int main(int argc, char **argv)
 	}
 
 	if (optind == argc) {
-		if (options[OptInfoFrame] && !options[OptGTF])
+		if (adapter_fd >= 0 && options[OptI2CEDID]) {
+			ret = read_edid(adapter_fd, edid);
+			if (ret > 0) {
+				state.edid_size = ret * EDID_PAGE_SIZE;
+				state.num_blocks = ret;
+				ret = 0;
+			}
+		} else if (adapter_fd >= 0) {
+			if (options[OptI2CHDCP])
+				ret = read_hdcp(adapter_fd);
+			if (options[OptI2CHDCPRi])
+				ret = read_hdcp_ri(adapter_fd, hdcp_ri_sleep);
+		} else if (options[OptInfoFrame] && !options[OptGTF]) {
 			ret = 0;
-		else
+		} else {
 			ret = edid_from_file("-", stdout);
+		}
 	} else {
 		ret = edid_from_file(argv[optind], argv[optind + 1] ? stderr : stdout);
 	}
@@ -2495,6 +2544,7 @@ extern "C" int parse_edid(const char *input)
 	options[OptPreferredTimings] = 1;
 	options[OptNativeResolution] = 1;
 	options[OptSkipSHA] = 0;
+	options[OptUTF8] = 1;
 	state = edid_state();
 	int ret = edid_from_file(input, stderr);
 	return ret ? ret : state.parse_edid();

@@ -133,6 +133,10 @@ HDMI 1.4b: High-Definition Multimedia Interface, Version 1.4b
 .TP
 HDMI 2.1b: High-Definition Multimedia Interface, Version 2.1b
 .TP
+HDCP 1.4: High-bandwidth Digital Content Protection System, Revision 1.4
+.TP
+HDCP 2.3: High-bandwidth Digital Content Protection System, Mapping HDCP to HDMI, Revision 2.3
+.TP
 CTA-861-I: A DTV Profile for Uncompressed High Speed Digital Interfaces
 .TP
 CTA-861.7: Improvements to CTA-861-I
@@ -205,6 +209,11 @@ parse multiple InfoFrames. If the EDID of the display to which these InfoFrames
 are transmitted is also given, then the conformity checks will take that EDID
 into account.
 
+If the first byte in the InfoFrame is 0x80 or higher, then it is assumed to be
+an InfoFrame that starts with the HDMI header and has a checksum, as per the
+HDMI Specification. Otherwise it is assumed to be a regular CTA-861 InfoFrame
+without a checksum.
+
 Note: this is still work-in-progress, specifically for the AVI and HDMI InfoFrames.
 .TP
 \fB\-\-diagonal\fR \fI<inches>\fR
@@ -256,6 +265,10 @@ failures. But it will also change the output of edid-decode for every new commit
 in the git repository, even if nothing else changed in the edid-decode output.
 Use this option to avoid including the SHA in the edid-decode output.
 .TP
+\fB\-u\fR, \fB\-\-utf8\fR
+Convert embedded EDID strings to UTF-8, using Code Page 437 for the base block
+and ISO 8859-1 for the DisplayID block.
+.TP
 \fB\-\-hide\-serial\-numbers\fR
 Hide any serial numbers in the human readable output by '...'.
 Note that they are still easily extracted from the EDID hex dump at
@@ -277,6 +290,25 @@ The 'Made in' date appears in the Base Block.
 .TP
 \fB\-\-version\fR
 Show the SHA hash and the last commit date.
+
+.SH I2C/DDC OPTIONS
+The following options read the DDC bus directly, provided the DDC bus is
+exposed by linux to \fB/dev/i2c-\fR\fIX\fR as an i2c adapter device.
+
+This can be used to read the EDID and HDCP information directly from
+the sink and parse it.
+.TP
+\fB\-a\fR, \fB\-\-i2c\-adapter\fR \fI<num>\fR
+Use this \fB/dev/i2c-\fR\fI<num>\fR device.
+.TP
+\fB\-\-i2c\-edid\fR
+Read and parse the EDID from the i2c adapter.
+.TP
+\fB\-\-i2c\-hdcp\fR
+Read and parse the HDCP data from the i2c adapter.
+.TP
+\fB\-\-i2c\-hdcp-ri\fR \fI<t>\fR
+Every \fI<t>\fR seconds read and report the HDCP Ri value from the i2c adapter.
 
 .SH TIMING OPTIONS
 The following options report the timings for DMT, VIC and HDMI VIC codes and
