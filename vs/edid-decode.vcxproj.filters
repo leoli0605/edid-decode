@@ -43,6 +43,9 @@
     <ClCompile Include="..\calc-ovt.cpp">
       <Filter>edid-decode</Filter>
     </ClCompile>
+    <ClCompile Include="..\parse-if.cpp">
+      <Filter>edid-decode</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\edid-decode.h">

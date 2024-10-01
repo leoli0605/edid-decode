@@ -1,7 +1,3 @@
-edid-decode
-*.dSYM
-*.o
-emscripten/*.o
 emscripten/edid-decode.wasm
 emscripten/edid-decode.js
 install-wasm
