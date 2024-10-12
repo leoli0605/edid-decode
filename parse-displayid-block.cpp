@@ -1422,104 +1422,7 @@ void edid_state::parse_displayid_ContainerID(const unsigned char *x)
 	}
 }
 
-// tag 0x2b
-
-void edid_state::parse_displayid_adaptive_sync(const unsigned char *x)
-{
-	check_displayid_datablock_revision(x[1], 0x70);
-
-	unsigned size = 6 + ((x[1] >> 4) & 0x7);
-	unsigned len = x[2];
-	unsigned descriptor = 1;
-
-	x += 3;
-	if (len % size)
-		fail("DisplayID payload length %u is not a multiple of %u.\n", len, size);
-	while (len >= size) {
-		printf("    Descriptor #%u:\n", descriptor++);
-
-		printf("      %sNative Panel Range\n", (x[0] & 1) ? "" : "Non-");
-		unsigned v = (x[0] >> 2) & 3;
-		switch (v) {
-		case 0: printf("      Fixed Average V-Total\n"); break;
-		case 1: printf("      Fixed Average V-Total and Adaptive V-Total\n"); break;
-		default:
-			printf("      Reserved %u\n", v);
-			fail("Use of reserved value %u.\n", v);
-			break;
-		}
-		if (!(x[0] & 0x10))
-			printf("      Supports Seamless Transition\n");
-		if (x[0] & 0x02)
-			printf("      'Max Single Frame Duration Increase' field value without jitter impact\n");
-		if (x[0] & 0x20)
-			printf("      'Max Single Frame Duration Decrease' field value without jitter impact\n");
-		printf("      Max Duration Increase: %.2f ms\n", x[1] / 4.0);
-		printf("      Max Duration Decrease: %.2f ms\n", x[5] / 4.0);
-		printf("      Min Refresh Rate: %u Hz\n", x[2]);
-		printf("      Max Refresh Rate: %u Hz\n", 1 + x[3] + (x[4] & 3) * 256);
-
-		len -= size;
-		x += size;
-	}
-}
-
-// tag 0x2c
-
-void edid_state::parse_displayid_arvr_hmd(const unsigned char *x)
-{
-	dispid.has_arvr_hdm = true;
-
-	if (!native_dispid && dispid.is_arvr)
-		fail("Not allowed for DisplayID Extension Blocks.\n");
-
-	check_displayid_datablock_revision(x[1], 1);
-
-	if (!check_displayid_datablock_length(x, 79, 79))
-		return;
-
-	// TODO: parse the DB
-}
-
-// tag 0x2d
-
-void edid_state::parse_displayid_arvr_layer(const unsigned char *x)
-{
-	dispid.has_arvr_layer = true;
-
-	if (!native_dispid && dispid.is_arvr)
-		fail("Not allowed for DisplayID Extension Blocks.\n");
-
-	check_displayid_datablock_revision(x[1], 1);
-
-	if (!check_displayid_datablock_length(x, 20, 20))
-		return;
-
-	// TODO: parse the DB
-}
-
-// tag 0x2e
-
-void edid_state::parse_displayid_brightness_lum_range(const unsigned char *x)
-{
-	check_displayid_datablock_revision(x[1]);
-
-	if (!check_displayid_datablock_length(x, 6, 6))
-		return;
-
-	printf("    Minimum SDR Luminance (Full Coverage): %s\n",
-	       ieee7542d(x[3] | (x[4] << 8)).c_str());
-	// TODO: test that this is > Native Minimum Luminance from Display Params DB
-	printf("    Maximum Suggested SDR Luminance (Full Coverage): %s\n",
-	       ieee7542d(x[5] | (x[6] << 8)).c_str());
-	// TODO: test that this is > Native Minimum Luminance from Display Params DB
-	// and <= Native Maximum Luminance (Full Coverage) in same DB.
-	printf("    Maximum Boost SDR Luminance: %s\n",
-	       ieee7542d(x[5] | (x[6] << 8)).c_str());
-	// TODO: test that this is >= the previous value
-}
-
-// tag 0x32
+// tag 0x2a
 
 void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 						unsigned sz, bool is_cta)
@@ -1624,6 +1527,103 @@ void edid_state::parse_displayid_type_10_timing(const unsigned char *x,
 		timings_ext te(t, name.c_str(), s);
 		cta.vec_vtdbs.push_back(te);
 	}
+}
+
+// tag 0x2b
+
+void edid_state::parse_displayid_adaptive_sync(const unsigned char *x)
+{
+	check_displayid_datablock_revision(x[1], 0x70);
+
+	unsigned size = 6 + ((x[1] >> 4) & 0x7);
+	unsigned len = x[2];
+	unsigned descriptor = 1;
+
+	x += 3;
+	if (len % size)
+		fail("DisplayID payload length %u is not a multiple of %u.\n", len, size);
+	while (len >= size) {
+		printf("    Descriptor #%u:\n", descriptor++);
+
+		printf("      %sNative Panel Range\n", (x[0] & 1) ? "" : "Non-");
+		unsigned v = (x[0] >> 2) & 3;
+		switch (v) {
+		case 0: printf("      Fixed Average V-Total\n"); break;
+		case 1: printf("      Fixed Average V-Total and Adaptive V-Total\n"); break;
+		default:
+			printf("      Reserved %u\n", v);
+			fail("Use of reserved value %u.\n", v);
+			break;
+		}
+		if (!(x[0] & 0x10))
+			printf("      Supports Seamless Transition\n");
+		if (x[0] & 0x02)
+			printf("      'Max Single Frame Duration Increase' field value without jitter impact\n");
+		if (x[0] & 0x20)
+			printf("      'Max Single Frame Duration Decrease' field value without jitter impact\n");
+		printf("      Max Duration Increase: %.2f ms\n", x[1] / 4.0);
+		printf("      Max Duration Decrease: %.2f ms\n", x[5] / 4.0);
+		printf("      Min Refresh Rate: %u Hz\n", x[2]);
+		printf("      Max Refresh Rate: %u Hz\n", 1 + x[3] + (x[4] & 3) * 256);
+
+		len -= size;
+		x += size;
+	}
+}
+
+// tag 0x2c
+
+void edid_state::parse_displayid_arvr_hmd(const unsigned char *x)
+{
+	dispid.has_arvr_hdm = true;
+
+	if (!native_dispid && dispid.is_arvr)
+		fail("Not allowed for DisplayID Extension Blocks.\n");
+
+	check_displayid_datablock_revision(x[1], 1);
+
+	if (!check_displayid_datablock_length(x, 79, 79))
+		return;
+
+	// TODO: parse the DB
+}
+
+// tag 0x2d
+
+void edid_state::parse_displayid_arvr_layer(const unsigned char *x)
+{
+	dispid.has_arvr_layer = true;
+
+	if (!native_dispid && dispid.is_arvr)
+		fail("Not allowed for DisplayID Extension Blocks.\n");
+
+	check_displayid_datablock_revision(x[1], 1);
+
+	if (!check_displayid_datablock_length(x, 20, 20))
+		return;
+
+	// TODO: parse the DB
+}
+
+// tag 0x2e
+
+void edid_state::parse_displayid_brightness_lum_range(const unsigned char *x)
+{
+	check_displayid_datablock_revision(x[1]);
+
+	if (!check_displayid_datablock_length(x, 6, 6))
+		return;
+
+	printf("    Minimum SDR Luminance (Full Coverage): %s\n",
+	       ieee7542d(x[3] | (x[4] << 8)).c_str());
+	// TODO: test that this is > Native Minimum Luminance from Display Params DB
+	printf("    Maximum Suggested SDR Luminance (Full Coverage): %s\n",
+	       ieee7542d(x[5] | (x[6] << 8)).c_str());
+	// TODO: test that this is > Native Minimum Luminance from Display Params DB
+	// and <= Native Maximum Luminance (Full Coverage) in same DB.
+	printf("    Maximum Boost SDR Luminance: %s\n",
+	       ieee7542d(x[5] | (x[6] << 8)).c_str());
+	// TODO: test that this is >= the previous value
 }
 
 // tag 0x7e, OUI 3A-02-92 (VESA)
@@ -1895,12 +1895,12 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x27: data_block = "Stereo Display Interface Data Block (" + utohex(tag) + ")"; break;
 	case 0x28: data_block = "Tiled Display Topology Data Block (" + utohex(tag) + ")"; break;
 	case 0x29: data_block = "ContainerID Data Block"; break;
+	case 0x2a: data_block = "Video Timing Modes Type 10 - Formula-based Timings Data Block"; break;
 	case 0x2b: data_block = "Adaptive Sync Data Block"; break;
 	case 0x2c: data_block = "ARVR_HMD Data Block"; break;
 	case 0x2d: data_block = "ARVR_Layer Data Block"; break;
 	case 0x2e: data_block = "Brightness Luminance Range Data Block"; break;
-	case 0x32: data_block = "Video Timing Modes Type 10 - Formula-based Timings Data Block"; break;
-	// 0x2a .. 0x7d RESERVED for Additional VESA-defined Data Blocks
+	// 0x2f .. 0x7d RESERVED for Additional VESA-defined Data Blocks
 	case 0x7e: // DisplayID 2.0
 		data_block_oui("Vendor-Specific Data Block (" + utohex(tag) + ")",
 			       x + 3, len, &ouinum, false, false, true);
@@ -2074,11 +2074,7 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 	case 0x27: parse_displayid_stereo_display_intf(x); break;
 	case 0x28: parse_displayid_tiled_display_topology(x, true); break;
 	case 0x29: parse_displayid_ContainerID(x); break;
-	case 0x2b: parse_displayid_adaptive_sync(x); break;
-	case 0x2c: parse_displayid_arvr_hmd(x); break;
-	case 0x2d: parse_displayid_arvr_layer(x); break;
-	case 0x2e: parse_displayid_brightness_lum_range(x); break;
-	case 0x32: {
+	case 0x2a: {
 		   unsigned sz = 6 + ((x[1] & 0x70) >> 4);
 
 		   check_displayid_datablock_revision(x[1], 0x70);
@@ -2089,6 +2085,10 @@ unsigned edid_state::displayid_block(const unsigned version, const unsigned char
 			   parse_displayid_type_10_timing(&x[3 + i * sz], sz);
 		   break;
 	}
+	case 0x2b: parse_displayid_adaptive_sync(x); break;
+	case 0x2c: parse_displayid_arvr_hmd(x); break;
+	case 0x2d: parse_displayid_arvr_layer(x); break;
+	case 0x2e: parse_displayid_brightness_lum_range(x); break;
 	case 0x7e|kOUI_VESA: parse_displayid_vesa(x); break;
 	case 0x7f|kOUI_Apple: parse_displayid_apple(x); break;
 	case 0x81: parse_displayid_cta_data_block(x); break;
