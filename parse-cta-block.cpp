@@ -1556,7 +1556,14 @@ static void cta_amd(const unsigned char *x, unsigned length)
 {
 	// These Freesync values are reversed engineered by looking
 	// at existing EDIDs.
-	printf("    Version: %u.%u\n", x[0], x[1]);
+	printf("    Version: %u\n", x[0]);
+
+	// Obtained from:
+	// https://github.com/torvalds/linux/commit/ec8e59cb4e0c1a52d5a541fff9dcec398b48f7b4
+	printf("    Feature Caps: 0x%02x\n", x[1]);
+	if (x[1] & 0x40)
+		printf("      Replay Supported\n");
+
 	printf("    Minimum Refresh Rate: %u Hz\n", x[2]);
 	printf("    Maximum Refresh Rate: %u Hz\n", x[3]);
 	// Freesync 1.x flags
