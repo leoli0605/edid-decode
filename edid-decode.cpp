@@ -66,6 +66,7 @@ enum Option {
 	OptI2CEDID,
 	OptI2CHDCP,
 	OptI2CHDCPRi,
+	OptI2CTestReliability,
 	OptSTD,
 	OptDMT,
 	OptVIC,
@@ -112,6 +113,7 @@ static struct option long_options[] = {
 	{ "i2c-edid", no_argument, 0, OptI2CEDID },
 	{ "i2c-hdcp", no_argument, 0, OptI2CHDCP },
 	{ "i2c-hdcp-ri", required_argument, 0, OptI2CHDCPRi },
+	{ "i2c-test-reliability", optional_argument, 0, OptI2CTestReliability },
 #endif
 	{ "std", required_argument, 0, OptSTD },
 	{ "dmt", required_argument, 0, OptDMT },
@@ -171,6 +173,10 @@ static void usage(void)
 	       "  --i2c-edid		Read the EDID from the DDC lines.\n"
 	       "  --i2c-hdcp		Read the HDCP from the DDC lines.\n"
 	       "  --i2c-hdcp-ri=<t>	Read and print the HDCP Ri information every <t> seconds.\n"
+	       "  --i2c-test-reliability [cnt=<cnt>][,sleep=<msecs>]\n"
+	       "                        Read the EDID <cnt> times (0=forever), with a sleep of <msecs> milliseconds\n"
+	       "                        (default value is 50 ms) in between each read. Report a FAIL if there are\n"
+	       "                        mismatches between EDIDs. This tests the i2c communication towards the display.\n"
 #endif
 	       "  --std <byte1>,<byte2> Show the standard timing represented by these two bytes.\n"
 	       "  --dmt <dmt>           Show the timings for the DMT with the given DMT ID.\n"
@@ -1939,13 +1945,8 @@ static int parse_cvt_subopt(char **subopt_str, double *value)
 		nullptr
 	};
 
-	opt = getsubopt(subopt_str, (char* const*) subopt_list, &opt_str);
+	opt = getsubopt(subopt_str, (char * const *)subopt_list, &opt_str);
 
-	if (opt == -1) {
-		fprintf(stderr, "Invalid suboptions specified.\n");
-		usage();
-		std::exit(EXIT_FAILURE);
-	}
 	if (opt_str == nullptr && opt != CVT_INTERLACED && opt != CVT_ALT &&
 	    opt != CVT_OVERSCAN && opt != CVT_EARLY_VSYNC) {
 		fprintf(stderr, "No value given to suboption <%s>.\n",
@@ -2280,38 +2281,115 @@ static void parse_ovt(char *optarg)
 	state.print_timings("", &t, "OVT", "", true, false);
 }
 
+enum test_reliability_opts {
+	REL_CNT,
+	REL_MSLEEP,
+};
+
+static int parse_test_reliability_subopt(char **subopt_str, unsigned *value)
+{
+	int opt;
+	char *opt_str;
+
+	static const char * const subopt_list[] = {
+		"cnt",
+		"msleep",
+		nullptr
+	};
+
+	opt = getsubopt(subopt_str, (char* const*) subopt_list, &opt_str);
+
+	if (opt == -1) {
+		fprintf(stderr, "Invalid suboptions specified.\n");
+		usage();
+		std::exit(EXIT_FAILURE);
+	}
+	if (opt_str == nullptr) {
+		fprintf(stderr, "No value given to suboption <%s>.\n",
+				subopt_list[opt]);
+		usage();
+		std::exit(EXIT_FAILURE);
+	}
+
+	if (opt_str)
+		*value = strtoul(opt_str, NULL, 0);
+	return opt;
+}
+
+static void parse_test_reliability(char *optarg, unsigned &cnt, unsigned &msleep)
+{
+	while (*optarg != '\0') {
+		int opt;
+		unsigned opt_val;
+
+		opt = parse_test_reliability_subopt(&optarg, &opt_val);
+
+		switch (opt) {
+		case REL_CNT:
+			cnt = opt_val;
+			break;
+		case REL_MSLEEP:
+			msleep = opt_val;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
-	char short_options[26 * 2 * 2 + 1];
+	char short_options[26 * 2 * 3 + 1];
 	enum output_format out_fmt = OUT_FMT_DEFAULT;
 	gtf_parsed_data gtf_data;
 	unsigned list_rid = 0;
 	int adapter_fd = -1;
 	double hdcp_ri_sleep = 0;
 	std::vector<std::string> if_names;
+	unsigned test_rel_cnt = 0;
+	unsigned test_rel_msleep = 50;
+	unsigned idx = 0;
+	unsigned i;
 	int ret;
 
-	while (1) {
+	for (i = 0; long_options[i].name; i++) {
+		if (!isalpha(long_options[i].val))
+			continue;
+		short_options[idx++] = long_options[i].val;
+		if (long_options[i].has_arg == required_argument) {
+			short_options[idx++] = ':';
+		} else if (long_options[i].has_arg == optional_argument) {
+			short_options[idx++] = ':';
+			short_options[idx++] = ':';
+		}
+	}
+	while (true) {
 		int option_index = 0;
-		unsigned idx = 0;
-		unsigned i, val;
+		unsigned val;
 		const timings *t;
 		char buf[16];
+		int ch;
 
-		for (i = 0; long_options[i].name; i++) {
-			if (!isalpha(long_options[i].val))
-				continue;
-			short_options[idx++] = long_options[i].val;
-			if (long_options[i].has_arg == required_argument)
-				short_options[idx++] = ':';
-		}
 		short_options[idx] = 0;
-		int ch = getopt_long(argc, argv, short_options,
-				     long_options, &option_index);
+		ch = getopt_long(argc, argv, short_options,
+				 long_options, &option_index);
 		if (ch == -1)
 			break;
 
 		options[ch] = 1;
+
+		if (!option_index) {
+			for (i = 0; long_options[i].val; i++) {
+				if (long_options[i].val == ch) {
+					option_index = i;
+					break;
+				}
+			}
+		}
+		if (long_options[option_index].has_arg == optional_argument &&
+		    !optarg && argv[optind] && argv[optind][0] != '-')
+			optarg = argv[optind++];
+
 		switch (ch) {
 		case OptHelp:
 			usage();
@@ -2342,6 +2420,10 @@ int main(int argc, char **argv)
 				exit(1);
 			break;
 		}
+		case OptI2CTestReliability:
+			if (optarg)
+				parse_test_reliability(optarg, test_rel_cnt, test_rel_msleep);
+			break;
 #endif
 		case OptI2CHDCPRi:
 			hdcp_ri_sleep = strtod(optarg, NULL);
@@ -2461,6 +2543,8 @@ int main(int argc, char **argv)
 				ret = read_hdcp(adapter_fd);
 			if (options[OptI2CHDCPRi])
 				ret = read_hdcp_ri(adapter_fd, hdcp_ri_sleep);
+			if (options[OptI2CTestReliability])
+				ret = test_reliability(adapter_fd, test_rel_cnt, test_rel_msleep);
 		} else if (options[OptInfoFrame] && !options[OptGTF]) {
 			ret = 0;
 		} else {

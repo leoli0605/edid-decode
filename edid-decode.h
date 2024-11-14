@@ -619,12 +619,14 @@ char *extract_string(const unsigned char *x, unsigned len, bool is_cp437);
 
 int request_i2c_adapter(unsigned adapnr);
 int read_edid(int adapter_fd, unsigned char *edid);
+int test_reliability(int adapter_fd, unsigned cnt, unsigned msleep);
 int read_hdcp(int adapter_fd);
 int read_hdcp_ri(int adapter_fd, double ri_time);
 
 #else
 
 static inline int read_edid(int adapter_fd, unsigned char *edid) { return -ENODEV; }
+static inline int test_reliability(int adapter_fd, unsigned cnt, unsigned msleep) { return -ENODEV; }
 static inline int read_hdcp(int adapter_fd) { return -ENODEV; }
 static inline int read_hdcp_ri(int adapter_fd, double ri_time) { return -ENODEV; }
 

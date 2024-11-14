@@ -117,6 +117,71 @@ int read_edid(int adapter_fd, unsigned char *edid)
 	return n_extension_blocks + 1;
 }
 
+int test_reliability(int adapter_fd, unsigned cnt, unsigned msleep)
+{
+	unsigned char edid[EDID_PAGE_SIZE * EDID_MAX_BLOCKS];
+	unsigned char edid_tmp[EDID_PAGE_SIZE * EDID_MAX_BLOCKS];
+	unsigned iter = 0;
+	unsigned blocks;
+	int ret;
+
+	ret = read_edid(adapter_fd, edid);
+	if (ret <= 0) {
+		printf("FAIL: could not read initial EDID.\n");
+		return ret;
+	}
+	blocks = ret;
+
+	if (cnt)
+		printf("Read EDID (%u bytes) %u times with %u milliseconds between each read.\n\n",
+		       blocks * EDID_PAGE_SIZE, cnt, msleep);
+	else
+		printf("Read EDID (%u bytes) forever with %u milliseconds between each read.\n\n",
+		       blocks * EDID_PAGE_SIZE, msleep);
+
+	time_t start = time(NULL);
+
+	while (true) {
+		iter++;
+		if (msleep)
+			usleep(msleep * 1000);
+		ret = read_edid(adapter_fd, edid_tmp);
+		if (ret <= 0) {
+			printf("\nFAIL: failed to read EDID (iteration %u).\n", iter);
+			return -1;
+		}
+		if ((unsigned)ret != blocks) {
+			printf("\nFAIL: expected %u blocks, read %d blocks (iteration %u).\n",
+			       blocks, ret, iter);
+			return -1;
+		}
+		if (memcmp(edid, edid_tmp, blocks * EDID_PAGE_SIZE)) {
+			printf("Initial EDID:\n\n");
+			for (unsigned i = 0; i < blocks; i++) {
+				hex_block("", edid + i * EDID_PAGE_SIZE, EDID_PAGE_SIZE, false);
+				printf("\n");
+			}
+			printf("EDID of iteration %u:\n\n", iter);
+			for (unsigned i = 0; i < blocks; i++) {
+				hex_block("", edid_tmp + i * EDID_PAGE_SIZE, EDID_PAGE_SIZE, false);
+				printf("\n");
+			}
+			printf("FAIL: mismatch between EDIDs (iteration %u).\n", iter);
+			return -1;
+		}
+		if (cnt && iter == cnt)
+			break;
+		time_t cur = time(NULL);
+		if (cur - start >= 10) {
+			start = cur;
+			printf("At iteration %u...\n", iter);
+		}
+	}
+
+	printf("\n%u iterations: PASS\n", cnt);
+	return 0;
+}
+
 static int read_hdcp_registers(int adapter_fd, __u8 *hdcp_prim, __u8 *hdcp_sec, __u8 *ksv_fifo)
 {
 	struct i2c_rdwr_ioctl_data data;
