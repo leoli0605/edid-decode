@@ -39,14 +39,13 @@
 #define HDCP_PRIM_ADDR 0x3a
 #define HDCP_SEC_ADDR 0x3b
 
-int request_i2c_adapter(unsigned adapnr)
+int request_i2c_adapter(const char *device)
 {
-	std::string i2c_adapter = "/dev/i2c-" + std::to_string(adapnr);
-	int fd = open(i2c_adapter.c_str(), O_RDWR);
+	int fd = open(device, O_RDWR);
 
 	if (fd >= 0)
 		return fd;
-	fprintf(stderr, "Error accessing i2c adapter %s\n", i2c_adapter.c_str());
+	fprintf(stderr, "Error accessing i2c adapter %s\n", device);
 	return fd;
 }
 

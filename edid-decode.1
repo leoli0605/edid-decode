@@ -298,8 +298,9 @@ exposed by linux to \fB/dev/i2c-\fR\fIX\fR as an i2c adapter device.
 This can be used to read the EDID and HDCP information directly from
 the sink and parse it.
 .TP
-\fB\-a\fR, \fB\-\-i2c\-adapter\fR \fI<num>\fR
-Use this \fB/dev/i2c-\fR\fI<num>\fR device.
+\fB\-a\fR, \fB\-\-i2c\-adapter\fR \fI<dev>\fR
+Use the \fI<dev>\fR device to access the DDC lines.
+If \fI<dev>\fR starts with a digit, then \fB/dev/i2c-\fR\fI<dev>\fR is used.
 .TP
 \fB\-\-i2c\-edid\fR
 Read and parse the EDID from the i2c adapter.

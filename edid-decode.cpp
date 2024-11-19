@@ -169,7 +169,8 @@ static void usage(void)
 	       "  --version             Show the edid-decode version (SHA).\n"
 	       "  --diagonal <inches>   Set the display's diagonal in inches.\n"
 #ifdef __HAS_I2C_DEV__
-	       "  -a, --i2c-adapter <num> Use /dev/i2c-<num> to access the DDC lines.\n"
+	       "  -a, --i2c-adapter <dev> Use <dev> to access the DDC lines.\n"
+	       "                        If <dev> starts with a digit, then /dev/i2c-<dev> is used.\n"
 	       "  --i2c-edid		Read the EDID from the DDC lines.\n"
 	       "  --i2c-hdcp		Read the HDCP from the DDC lines.\n"
 	       "  --i2c-hdcp-ri=<t>	Read and print the HDCP Ri information every <t> seconds.\n"
@@ -2413,9 +2414,16 @@ int main(int argc, char **argv)
 			break;
 #ifdef __HAS_I2C_DEV__
 		case OptI2CAdapter: {
-			unsigned num = strtoul(optarg, NULL, 0);
+			std::string device = optarg;
 
-			adapter_fd = request_i2c_adapter(num);
+			if (device[0] >= '0' && device[0] <= '9' && device.length() <= 3) {
+				static char newdev[20];
+
+				sprintf(newdev, "/dev/i2c-%s", optarg);
+				device = newdev;
+			}
+
+			adapter_fd = request_i2c_adapter(device.c_str());
 			if (adapter_fd < 0)
 				exit(1);
 			break;
